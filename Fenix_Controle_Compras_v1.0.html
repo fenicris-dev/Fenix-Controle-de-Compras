@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#041273">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Fênix | Controle de Compras</title>
+<style>
+:root{--navy:#041273;--navy2:#0a1f9e;--gold:#d4a62a;--gold2:#f0c850;--bg:#f3f4fa;--card:#fff;--tx:#1b1d2b;--mut:#6b6f85;--red:#c62828;--green:#1b8a4b;--line:#e1e3ee}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;overscroll-behavior-y:none;overscroll-behavior:none}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+header{background:var(--navy);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:17px;margin:0}header h1 span{color:var(--gold2)}header small{opacity:.7;font-size:12px}
+main{padding:12px;max-width:760px;margin:0 auto}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;z-index:60;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;padding:8px 2px;font-size:11px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button b{font-size:20px;font-weight:400}nav button.on{color:var(--navy);font-weight:700}nav button.on b{filter:none}
+.card{background:var(--card);border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(4,18,115,.08)}
+.card.tap{cursor:pointer}.center{text-align:center}
+h2{font-size:17px;margin:0 0 8px}h3{font-size:15px;margin:14px 0 6px;color:var(--navy)}
+.hint{color:var(--mut);font-size:12.5px;margin:4px 0}
+.btn{border:0;border-radius:10px;padding:11px 14px;font-size:15px;background:var(--navy);color:#fff;margin:4px 0;width:100%;font-weight:600}
+.btn.gold{background:var(--gold);color:#1b1500}.btn.ghost{background:#e8eafb;color:var(--navy)}.btn.danger{background:var(--red)}
+.btn.big{padding:15px;font-size:17px}.btn.sm{padding:8px 10px;font-size:13px;margin:2px 0}.btn.inl{width:auto}
+.row{display:flex;gap:8px}.row>*{flex:1}
+label{display:block;font-size:12.5px;color:var(--mut);margin:8px 0 0}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:16px;background:#fff;color:var(--tx);margin-top:3px;font-family:inherit}
+input[type=checkbox]{width:auto;margin-right:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tot{display:flex;justify-content:space-between;align-items:baseline}.tot b{font-size:26px;color:var(--navy)}
+.lim{height:10px;background:#e8eafb;border-radius:6px;overflow:hidden;margin-top:6px}.lim i{display:block;height:100%;background:var(--green)}
+.lim.over i{background:var(--red)}.over-t{color:var(--red);font-weight:700}
+.tms{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.tm{background:#fff;border-radius:12px;padding:10px;border:2px solid transparent;text-align:center}.tm.on{border-color:var(--gold);background:#fff9e5}
+.tn{font-size:12px;color:var(--mut);min-height:30px}.tt{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--navy)}
+.it{display:flex;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}.it:last-child{border:0}
+.it .nm{flex:1;min-width:0}.it .nm b{display:block;font-size:14.5px;overflow-wrap:anywhere}.it .nm small{color:var(--mut)}
+.it .vl{font-weight:700;white-space:nowrap}
+.ic{border:0;background:#e8eafb;color:var(--navy);border-radius:8px;width:34px;height:34px;font-size:16px;font-weight:700}
+.ic.r{background:#fde7e7;color:var(--red)}
+.badge{display:inline-block;background:var(--gold2);color:#4a3600;border-radius:6px;font-size:11px;padding:1px 6px;margin-left:4px;font-weight:700}
+.bar{display:grid;grid-template-columns:52px 1fr 54px;gap:6px;align-items:center;font-size:13px;margin:4px 0}
+.bar i{display:block;height:14px;background:var(--navy);border-radius:5px;min-width:2px}.bar b{text-align:right;font-weight:600}
+.ov{position:fixed;inset:0;background:rgba(10,15,40,.55);display:flex;align-items:flex-end;justify-content:center;overscroll-behavior:contain}
+.md{background:#fff;width:100%;max-width:640px;max-height:93vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column}
+.mh{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
+.mh b{font-size:16px;color:var(--navy)}.x{border:0;background:#eceefb;border-radius:50%;width:36px;height:36px;font-size:17px;color:var(--navy)}
+.mb{padding:12px 14px calc(18px + env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain}
+.scanbox{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:4/3}
+.scanbox video{width:100%;height:100%;object-fit:cover}
+.mira{position:absolute;inset:18% 12%;border:3px solid var(--gold2);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:5000;opacity:0;transition:.25s;pointer-events:none;max-width:90%;text-align:center}
+#toast.on{opacity:1}
+.empty{text-align:center;color:var(--mut);padding:26px 10px}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:14px}.kv span:first-child{color:var(--mut)}.kv span:last-child{text-align:right;overflow-wrap:anywhere}
+ul.chg{padding-left:18px;margin:4px 0}
+</style>
+</head>
+<body>
+<header><h1>Fênix <span>|</span> Controle de Compras</h1><small id="ver"></small></header>
+<main id="main"></main>
+<nav id="nav"></nav>
+<div id="toast"></div>
+<script>
+'use strict';
+const VERSAO='1.0';
+const CHANGELOG=[{v:'1.0',d:'18/10/2026',i:[
+ 'Primeira versão do Controle de Compras.',
+ 'Compra em andamento: itens somados em tempo real (valor e quantidade) conforme vão para o carrinho.',
+ 'Leitura de código de barras e QR Code pela câmera do celular, com digitação manual como alternativa.',
+ 'Banco de produtos: o produto lido uma vez é lembrado (nome, unidade, preço normal e histórico de preços).',
+ 'QR Code / código de barras da nota: extrai a chave de acesso (UF, CNPJ, série, número) e confere o dígito verificador.',
+ 'Cadastro da nota: data, hora, número, chave, código de autorização SEFAZ, estabelecimento, valor total e itens; ordem cronológica da mais atual para a mais antiga.',
+ 'Limite de gasto da compra com barra de progresso e aviso ao ultrapassar.',
+ 'Quatro cronômetros em paralelo: casa, estabelecimento, caixa e fila.',
+ 'Estatísticas: dias e horários de compra, tempos médios e melhor horário.',
+ 'Backup e restauração em arquivo; exclusões sempre pedem confirmação; "apagar tudo" exige digitar APAGAR.'
+]}];
+
+/* ====== dados ====== */
+const KEY='fenixControleCompras';
+function base(){return{produtos:{},compras:[],estabs:{},sessao:null,config:{limitePadrao:0}};}
+function carregar(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d)return Object.assign(base(),d);}catch(e){}return base();}
+let db=carregar();
+function salvar(){try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){toast('Sem espaço para salvar. Faça um backup.');}}
+
+/* ====== utilidades ====== */
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const enc=s=>encodeURIComponent(s).replace(/'/g,'%27');
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const p2=n=>String(n).padStart(2,'0');
+const hoje=()=>{const d=new Date();return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());};
+const agora=()=>{const d=new Date();return p2(d.getHours())+':'+p2(d.getMinutes());};
+const fmtData=iso=>{const a=String(iso||'').split('-');return a.length===3?a[2]+'/'+a[1]+'/'+a[0]:'';};
+const BRL=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+const fmt=n=>BRL.format(Number(n)||0);
+const fq=q=>String(+Number(q).toFixed(3)).replace('.',',');
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const cmp=(a,b)=>String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'});
+function parseNum(s){s=String(s==null?'':s).trim();if(!s)return NaN;if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');return parseFloat(s);}
+function fmtDur(ms){const t=Math.max(0,Math.floor(ms/1000)),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;return h?h+':'+p2(m)+':'+p2(s):p2(m)+':'+p2(s);}
+function fmtMin(ms){const m=Math.round(ms/60000);return m<60?m+' min':Math.floor(m/60)+'h '+p2(m%60)+'min';}
+const itemTotal=i=>Math.round(i.qtd*i.preco*100)/100;
+const somaItens=a=>Math.round((a||[]).reduce((s,i)=>s+itemTotal(i),0)*100)/100;
+const chaveProd=i=>i.codigo?String(i.codigo):'nome:'+norm(i.nome).trim();
+const totalCompra=c=>c.total>0?c.total:somaItens(c.itens);
+let toastT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2600);}
+function vibra(p){try{navigator.vibrate&&navigator.vibrate(p);}catch(e){}}
+
+/* ====== modais (só fecham pelo ✕ ou pelos botões) ====== */
+let zc=1000;
+function abrirModal(titulo,corpo,op){op=op||{};
+ const ov=document.createElement('div');ov.className='ov';ov.style.zIndex=++zc;
+ const md=document.createElement('div');md.className='md';
+ const h=document.createElement('div');h.className='mh';h.innerHTML='<b>'+esc(titulo)+'</b><button class="x" aria-label="Fechar">✕</button>';
+ const c=document.createElement('div');c.className='mb';
+ if(typeof corpo==='string')c.innerHTML=corpo;else c.appendChild(corpo);
+ md.appendChild(h);md.appendChild(c);ov.appendChild(md);document.body.appendChild(ov);
+ let fechado=false;
+ const api={el:c,fechar(){if(fechado)return;fechado=true;ov.remove();if(op.aoFechar)op.aoFechar();}};
+ h.querySelector('.x').onclick=api.fechar;
+ return api;}
+function confirmar(msg,sim){return new Promise(res=>{let r=false;
+ const m=abrirModal('Confirmar','<p style="margin-top:0">'+esc(msg)+'</p><div class="row"><button class="btn ghost" id="cN">Não</button><button class="btn danger" id="cS">'+esc(sim||'Sim')+'</button></div>',{aoFechar:()=>res(r)});
+ m.el.querySelector('#cN').onclick=()=>m.fechar();
+ m.el.querySelector('#cS').onclick=()=>{r=true;m.fechar();};});}
+
+/* ====== leitor de código (câmera) ====== */
+function scanner(titulo,aoLer){
+ const sup='BarcodeDetector' in window;
+ const m=abrirModal(titulo,'<div class="scanbox"><video playsinline muted></video><div class="mira"></div></div><p class="hint" id="scMsg">'+(sup?'Aponte a câmera para o código de barras ou QR Code.':'Este navegador não lê códigos pela câmera. Use o Chrome no Android, ou digite o código abaixo.')+'</p><label>Ou digite / cole o código<input id="scMan" autocomplete="off"></label><button class="btn gold" id="scOk">Usar este código</button>',{aoFechar:parar});
+ const v=m.el.querySelector('video');let stream=null,tm=null,vivo=true,ocupado=false;
+ function parar(){vivo=false;clearInterval(tm);if(stream)stream.getTracks().forEach(t=>t.stop());}
+ function achou(txt){if(!vivo)return;vivo=false;vibra(60);m.fechar();aoLer(String(txt).trim());}
+ m.el.querySelector('#scOk').onclick=()=>{const t=m.el.querySelector('#scMan').value.trim();if(!t){toast('Digite o código');return;}achou(t);};
+ if(!sup)return;
+ (async()=>{try{
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280}},audio:false});
+  if(!vivo){stream.getTracks().forEach(t=>t.stop());return;}
+  v.srcObject=stream;await v.play();
+  let det;try{det=new BarcodeDetector({formats:['qr_code','ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf']});}catch(e){det=new BarcodeDetector();}
+  tm=setInterval(async()=>{if(!vivo||ocupado||v.readyState<2)return;ocupado=true;
+   try{const r=await det.detect(v);if(r&&r.length)achou(r[0].rawValue);}catch(e){}ocupado=false;},250);
+ }catch(e){const s=m.el.querySelector('#scMsg');if(s)s.textContent='Não consegui abrir a câmera ('+(e.name||'erro')+'). A câmera só funciona em página segura (https) e com a permissão liberada. Você pode digitar o código.';}})();
+}
+
+/* ====== chave de acesso da NF-e / NFC-e ====== */
+const UFS={11:'RO',12:'AC',13:'AM',14:'RR',15:'PA',16:'AP',17:'TO',21:'MA',22:'PI',23:'CE',24:'RN',25:'PB',26:'PE',27:'AL',28:'SE',29:'BA',31:'MG',32:'ES',33:'RJ',35:'SP',41:'PR',42:'SC',43:'RS',50:'MS',51:'MT',52:'GO',53:'DF'};
+function dvOk(ch){let pe=2,s=0;for(let i=42;i>=0;i--){s+=+ch[i]*pe;pe=pe===9?2:pe+1;}const r=s%11;const dv=r<2?0:11-r;return dv===+ch[43];}
+function lerChave(txt){const m=String(txt).replace(/\s/g,'').match(/\d{44}/);if(!m)return null;const ch=m[0];
+ return{chave:ch,uf:UFS[+ch.slice(0,2)]||'',aamm:ch.slice(2,6),cnpj:ch.slice(6,20),modelo:ch.slice(20,22),serie:String(+ch.slice(22,25)),numero:String(+ch.slice(25,34)),dv:dvOk(ch)};}
+function fmtCnpj(c){c=String(c||'').replace(/\D/g,'');return c.length===14?c.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5'):c;}
+
+/* ====== cronômetros ====== */
+const TIMERS=[
+ {k:'casa',nome:'🏠 Saída de casa → Retorno',ini:'Saí de casa',fim:'Voltei'},
+ {k:'loja',nome:'🏬 No estabelecimento',ini:'Cheguei',fim:'Saí'},
+ {k:'caixa',nome:'💳 No caixa',ini:'Cheguei no caixa',fim:'Finalizei'},
+ {k:'fila',nome:'🧍 Fila (açougue, padaria…)',ini:'Entrei na fila',fim:'Saí da fila'}];
+const novosTimers=()=>{const o={};TIMERS.forEach(t=>o[t.k]={seg:[],ini:null});return o;};
+const tTotal=t=>t.seg.reduce((a,s)=>a+(s[1]-s[0]),0)+(t.ini?Date.now()-t.ini:0);
+function temposDe(s){const o={},now=Date.now();TIMERS.forEach(d=>{const t=s.timers[d.k];if(t.ini){t.seg.push([t.ini,now]);t.ini=null;}o[d.k]=tTotal(t);o[d.k+'N']=t.seg.length;});o.inicio=s.criadoEm;return o;}
+setInterval(()=>{document.querySelectorAll('[data-t]').forEach(e=>{const t=db.sessao&&db.sessao.timers[e.dataset.t];if(t)e.textContent=fmtDur(tTotal(t));});},1000);
+
+/* ====== estado de tela ====== */
+let aba='compra';const q={notas:'',prod:''};
+const ABAS=[['compra','🛒','Compra'],['notas','🧾','Notas'],['prod','📦','Produtos'],['stats','📊','Estatísticas'],['ajustes','⚙️','Ajustes']];
+function render(){
+ document.getElementById('ver').textContent='v'+VERSAO;
+ document.getElementById('nav').innerHTML=ABAS.map(a=>'<button class="'+(aba===a[0]?'on':'')+'" onclick="app.aba(\''+a[0]+'\')"><b>'+a[1]+'</b>'+a[2]+'</button>').join('');
+ const v={compra:viewCompra,notas:viewNotas,prod:viewProd,stats:viewStats,ajustes:viewAjustes}[aba];
+ document.getElementById('main').innerHTML=v();
+}
+function nomesEstab(){return Object.values(db.estabs).map(e=>e.nome).sort(cmp);}
+function dlEstab(){return '<datalist id="dlEstab">'+nomesEstab().map(n=>'<option value="'+esc(n)+'">').join('')+'</datalist>';}
+
+/* ====== aba Compra ====== */
+function viewCompra(){
+ const s=db.sessao;
+ if(!s)return '<div class="card center"><h2>Nenhuma compra em andamento</h2><p class="hint">Inicie a compra ao sair de casa ou ao chegar ao estabelecimento. Os itens, o total e os cronômetros ficam aqui.</p><button class="btn gold big" onclick="app.iniciar()">🛒 Iniciar compra</button><button class="btn ghost" onclick="app.notaAvulsa()">🧾 Cadastrar nota avulsa (pelo QR Code)</button></div>';
+ const tot=somaItens(s.itens),lim=s.limite||0,pct=lim?Math.min(100,tot/lim*100):0,over=lim&&tot>lim;
+ const unid=s.itens.length,qtdTot=s.itens.reduce((a,i)=>a+(['un','pct','cx'].includes(i.unidade)?i.qtd:1),0);
+ const tms=TIMERS.map(d=>{const t=s.timers[d.k],on=!!t.ini;return '<div class="tm '+(on?'on':'')+'"><div class="tn">'+d.nome+'</div><div class="tt" data-t="'+d.k+'">'+fmtDur(tTotal(t))+'</div><button class="btn '+(on?'danger':'gold')+' sm" onclick="app.timer(\''+d.k+'\')">'+(on?d.fim:d.ini)+'</button>'+(t.seg.length?'<div class="hint">'+t.seg.length+' trecho(s)</div>':'')+'</div>';}).join('');
+ const lista=s.itens.map((i,ix)=>({i,ix})).sort((a,b)=>cmp(a.i.nome,b.i.nome)).map(o=>linhaItem(o.i,o.ix,true)).join('');
+ return '<div class="card"><div class="row" style="align-items:center"><div><b>'+esc(s.estab||'(estabelecimento não informado)')+'</b><div class="hint">Iniciada às '+new Date(s.criadoEm).toTimeString().slice(0,5)+'</div></div><button class="btn ghost sm inl" style="flex:0 0 auto" onclick="app.editarSessao()">✎ Editar</button></div>'
+ +'<div class="tot"><span>Total parcial</span><b class="'+(over?'over-t':'')+'">'+fmt(tot)+'</b></div>'
+ +'<div class="hint">'+unid+' item(ns) diferentes · '+fq(qtdTot)+' no carrinho'+(lim?' · limite '+fmt(lim)+(over?' · <span class="over-t">passou '+fmt(tot-lim)+'</span>':' · resta '+fmt(lim-tot)):'')+'</div>'
+ +(lim?'<div class="lim '+(over?'over':'')+'"><i style="width:'+pct+'%"></i></div>':'')+'</div>'
+ +'<div class="tms">'+tms+'</div>'
+ +'<button class="btn gold big" onclick="app.escanearProduto()">📷 Escanear produto</button>'
+ +'<button class="btn ghost" onclick="app.itemManual()">＋ Adicionar item manualmente</button>'
+ +'<div class="card" style="margin-top:10px"><h2>Itens</h2>'+(lista||'<div class="empty">Nenhum item ainda.</div>')+'</div>'
+ +'<button class="btn" onclick="app.finalizar()">✅ Finalizar compra</button><button class="btn ghost" onclick="app.cancelarSessao()">Cancelar compra</button>';
+}
+function linhaItem(i,ix,passos){
+ const cont=['un','pct','cx'].includes(i.unidade);
+ return '<div class="it"><div class="nm"><b>'+esc(i.nome)+(i.promo?'<span class="badge">PROMO</span>':'')+'</b><small>'+fq(i.qtd)+' '+esc(i.unidade)+' × '+fmt(i.preco)+(i.codigo?' · '+esc(i.codigo):'')+'</small></div><div class="vl">'+fmt(itemTotal(i))+'</div>'
+ +(passos&&cont?'<button class="ic" onclick="app.passo('+ix+',-1)">−</button><button class="ic" onclick="app.passo('+ix+',1)">+</button>':'')
+ +'<button class="ic" onclick="app.editarItem('+ix+')">✎</button><button class="ic r" onclick="app.removerItem('+ix+')">✕</button></div>';
+}
+
+/* ====== modal de item ====== */
+function itemModal(it,cb,titulo){
+ const us=['un','kg','g','l','ml','pct','cx'];
+ const pr=db.produtos[chaveProd(it)];
+ const ult=pr&&pr.historico&&pr.historico.length?pr.historico[pr.historico.length-1]:null;
+ const nomes=Object.values(db.produtos).map(p=>p.nome).sort(cmp);
+ const m=abrirModal(titulo||'Item','<div class="hint">'+(ult?'Última vez: '+fmt(ult.p)+(ult.promo?' (promoção)':'')+(ult.e?' em '+esc(ult.e):'')+' · '+fmtData(ult.d):(pr?'Produto já cadastrado.':'Produto novo — será lembrado nas próximas compras.'))+'</div>'
+ +'<label>Código de barras / QR<input id="i_cod" inputmode="numeric" autocomplete="off"></label>'
+ +'<label>Nome do produto<input id="i_nome" list="dlProd" autocomplete="off"></label><datalist id="dlProd">'+nomes.map(n=>'<option value="'+esc(n)+'">').join('')+'</datalist>'
+ +'<div class="grid2"><label>Quantidade<input id="i_qtd" inputmode="decimal"></label><label>Unidade<select id="i_un">'+us.map(u=>'<option>'+u+'</option>').join('')+'</select></label></div>'
+ +'<label>Preço unitário (R$)<input id="i_preco" inputmode="decimal"></label>'
+ +'<label><input type="checkbox" id="i_promo">Preço promocional</label>'
+ +'<label id="i_pnw">Preço normal (R$)<input id="i_pn" inputmode="decimal"></label>'
+ +'<button class="btn gold big" id="i_ok">Salvar item</button>');
+ const g=id=>m.el.querySelector('#'+id);
+ g('i_cod').value=it.codigo||'';g('i_nome').value=it.nome||'';g('i_qtd').value=it.qtd?fq(it.qtd):'1';g('i_un').value=it.unidade||'un';
+ g('i_preco').value=it.preco!==''&&it.preco!=null?String(it.preco).replace('.',','):'';
+ g('i_promo').checked=!!it.promo;g('i_pn').value=it.precoNormal?String(it.precoNormal).replace('.',','):(pr&&pr.precoNormal?String(pr.precoNormal).replace('.',','):'');
+ const vis=()=>{g('i_pnw').style.display=g('i_promo').checked?'block':'none';};vis();g('i_promo').onchange=vis;
+ const auto=p=>{if(!p)return;if(!g('i_nome').value)g('i_nome').value=p.nome;g('i_un').value=p.unidade||g('i_un').value;if(!g('i_preco').value&&p.ultimoPreco)g('i_preco').value=String(p.ultimoPreco).replace('.',',');if(p.precoNormal&&!g('i_pn').value)g('i_pn').value=String(p.precoNormal).replace('.',',');};
+ g('i_cod').onchange=()=>auto(db.produtos[g('i_cod').value.trim()]);
+ g('i_nome').onchange=()=>{const k='nome:'+norm(g('i_nome').value).trim();const p=db.produtos[k]||Object.values(db.produtos).find(x=>norm(x.nome)===norm(g('i_nome').value));auto(p);};
+ g('i_ok').onclick=()=>{
+  const nome=g('i_nome').value.trim(),qtd=parseNum(g('i_qtd').value),preco=parseNum(g('i_preco').value),promo=g('i_promo').checked,pn=parseNum(g('i_pn').value);
+  if(!nome){toast('Informe o nome do produto');return;}
+  if(!(qtd>0)){toast('Informe a quantidade');return;}
+  if(isNaN(preco)||preco<0){toast('Informe o preço unitário');return;}
+  const out={codigo:g('i_cod').value.trim(),nome,unidade:g('i_un').value,qtd,preco,promo,precoNormal:promo&&pn>0?pn:null};
+  m.fechar();cb(out);};
+ setTimeout(()=>{(g('i_nome').value?g('i_preco'):g('i_nome')).focus();},150);
+}
+function lembrarProduto(it){const k=chaveProd(it);const p=db.produtos[k]||{codigo:it.codigo||'',historico:[]};p.nome=it.nome;p.unidade=it.unidade;if(it.precoNormal&&!p.precoNormal)p.precoNormal=it.precoNormal;db.produtos[k]=p;}
+function registrarPrecos(c){c.itens.forEach(it=>{lembrarProduto(it);const p=db.produtos[chaveProd(it)];p.ultimoPreco=it.preco;if(!it.promo)p.precoNormal=it.preco;p.historico.push({d:c.data,e:c.estab,p:it.preco,promo:!!it.promo});if(p.historico.length>40)p.historico.splice(0,p.historico.length-40);});}
+
+/* ====== formulário da nota ====== */
+function formCompra(c,modo){
+ const m=abrirModal(modo==='editar'?'Editar compra':modo==='avulsa'?'Nota avulsa':'Finalizar compra',
+ '<div class="grid2"><label>Data da compra<input type="date" id="f_data"></label><label>Hora da NF-e<input type="time" id="f_hora"></label></div>'
+ +'<label>Estabelecimento<input id="f_estab" list="dlEstab" autocomplete="off"></label>'+dlEstab()
+ +'<button class="btn ghost" id="f_qr">📷 Ler QR Code / código de barras da nota</button>'
+ +'<div class="grid2"><label>Nº da NF-e<input id="f_num" inputmode="numeric"></label><label>Série<input id="f_serie" inputmode="numeric"></label></div>'
+ +'<label>CNPJ do estabelecimento<input id="f_cnpj" inputmode="numeric"></label>'
+ +'<label>Chave de acesso (44 dígitos)<input id="f_chave" inputmode="numeric"></label>'
+ +'<label>Código de autorização SEFAZ (protocolo)<input id="f_prot" inputmode="numeric"></label>'
+ +'<label>Valor total da compra (opcional — serve para conferir com os itens)<input id="f_total" inputmode="decimal"></label>'
+ +'<h3>Itens</h3><div id="f_itens"></div>'
+ +'<div class="row"><button class="btn ghost" id="f_add">＋ Item</button><button class="btn ghost" id="f_scan">📷 Escanear</button></div>'
+ +'<label>Observações<textarea id="f_obs" rows="2"></textarea></label>'
+ +'<button class="btn gold big" id="f_save">Salvar compra</button>');
+ const g=id=>m.el.querySelector('#'+id);
+ g('f_data').value=c.data||hoje();g('f_hora').value=c.hora||agora();g('f_estab').value=c.estab||'';g('f_num').value=c.numero||'';g('f_serie').value=c.serie||'';
+ g('f_cnpj').value=fmtCnpj(c.cnpj);g('f_chave').value=c.chave||'';g('f_prot').value=c.protocolo||'';g('f_total').value=c.total?String(c.total).replace('.',','):'';g('f_obs').value=c.obs||'';
+ function itens(){const arr=c.itens.map((i,ix)=>({i,ix})).sort((a,b)=>cmp(a.i.nome,b.i.nome));
+  g('f_itens').innerHTML=(arr.length?arr.map(o=>'<div class="it"><div class="nm"><b>'+esc(o.i.nome)+(o.i.promo?'<span class="badge">PROMO</span>':'')+'</b><small>'+fq(o.i.qtd)+' '+esc(o.i.unidade)+' × '+fmt(o.i.preco)+'</small></div><div class="vl">'+fmt(itemTotal(o.i))+'</div><button class="ic" data-e="'+o.ix+'">✎</button><button class="ic r" data-r="'+o.ix+'">✕</button></div>').join(''):'<div class="hint">Nenhum item. Você pode salvar só com os dados da nota.</div>')+'<div class="kv"><span>Soma dos itens</span><span><b>'+fmt(somaItens(c.itens))+'</b></span></div>';
+  g('f_itens').querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>itemModal(c.itens[+b.dataset.e],n=>{c.itens[+b.dataset.e]=n;itens();},'Editar item'));
+  g('f_itens').querySelectorAll('[data-r]').forEach(b=>b.onclick=async()=>{const i=c.itens[+b.dataset.r];if(await confirmar('Tem certeza que quer excluir "'+i.nome+'"?','Excluir')){c.itens.splice(+b.dataset.r,1);itens();}});}
+ itens();
+ g('f_add').onclick=()=>itemModal({qtd:1,unidade:'un'},n=>{c.itens.push(n);itens();},'Novo item');
+ g('f_scan').onclick=()=>scanner('Escanear produto',cod=>{const p=db.produtos[cod];itemModal({codigo:cod,nome:p?p.nome:'',unidade:p?p.unidade:'un',qtd:1,preco:p&&p.ultimoPreco?p.ultimoPreco:'',precoNormal:p&&p.precoNormal},n=>{c.itens.push(n);itens();},'Novo item');});
+ g('f_qr').onclick=()=>scanner('Ler a nota',txt=>{
+  const r=lerChave(txt);if(/^https?:/i.test(txt))c.url=txt;
+  if(!r){toast('Não encontrei a chave de acesso neste código. Preencha os dados à mão.');return;}
+  g('f_chave').value=r.chave;g('f_num').value=r.numero;g('f_serie').value=r.serie;g('f_cnpj').value=fmtCnpj(r.cnpj);c.uf=r.uf;c.modelo=r.modelo;
+  const conhecido=Object.values(db.estabs).find(e=>e.cnpj&&e.cnpj.replace(/\D/g,'')===r.cnpj);if(conhecido&&!g('f_estab').value)g('f_estab').value=conhecido.nome;
+  if(r.aamm){const ano=2000+(+r.aamm.slice(0,2)),mes=r.aamm.slice(2);if(!c.data||g('f_data').value.slice(0,7)!==ano+'-'+mes)toast('Nota emitida em '+mes+'/'+ano+'. Confira a data da compra.');}
+  toast(r.dv?'Chave lida ✔ ('+(r.uf||'UF?')+')':'Chave lida, mas o dígito verificador não confere. Confira a leitura.');});
+ g('f_save').onclick=async()=>{
+  const data=g('f_data').value;if(!data){toast('Informe a data da compra');return;}
+  const chave=g('f_chave').value.replace(/\D/g,'');
+  if(chave&&chave.length!==44&&!await confirmar('A chave de acesso tem '+chave.length+' dígitos (o normal são 44). Salvar assim mesmo?','Salvar'))return;
+  const tot=parseNum(g('f_total').value),soma=somaItens(c.itens);
+  if(tot>0&&soma>0&&Math.abs(tot-soma)>0.009&&!await confirmar('A soma dos itens ('+fmt(soma)+') é diferente do total da nota ('+fmt(tot)+'). Salvar assim mesmo?','Salvar'))return;
+  const estab=g('f_estab').value.trim(),cnpj=g('f_cnpj').value.replace(/\D/g,'');
+  const reg={id:c.id||uid(),data,hora:g('f_hora').value,estab,cnpj,numero:g('f_num').value.trim(),serie:g('f_serie').value.trim(),chave,protocolo:g('f_prot').value.trim(),total:tot>0?tot:0,itens:c.itens,limite:c.limite||0,tempos:c.tempos||null,url:c.url||'',uf:c.uf||'',modelo:c.modelo||'',obs:g('f_obs').value.trim()};
+  if(modo==='sessao')reg.tempos=temposDe(db.sessao);
+  if(estab){const k=norm(estab);db.estabs[k]={nome:estab,cnpj:cnpj||(db.estabs[k]&&db.estabs[k].cnpj)||''};}
+  if(modo==='editar'){const ix=db.compras.findIndex(x=>x.id===reg.id);if(ix>=0)db.compras[ix]=reg;else db.compras.push(reg);}
+  else{db.compras.push(reg);registrarPrecos(reg);}
+  if(modo==='sessao')db.sessao=null;
+  salvar();m.fechar();aba='notas';render();toast('Compra salva ✔');};
+}
+
+/* ====== aba Notas ====== */
+function viewNotas(){return '<input placeholder="🔍 Buscar por estabelecimento, produto ou número" value="'+esc(q.notas)+'" oninput="app.filtrar(\'notas\',this.value)"><button class="btn ghost" onclick="app.notaAvulsa()">＋ Nota avulsa</button><div id="lista" style="margin-top:8px">'+listaNotas()+'</div>';}
+function listaNotas(){
+ const t=norm(q.notas);
+ let arr=db.compras.slice().sort((a,b)=>(b.data+' '+(b.hora||'')).localeCompare(a.data+' '+(a.hora||'')));
+ if(t)arr=arr.filter(c=>norm([c.estab,c.numero,c.chave].concat(c.itens.map(i=>i.nome)).join(' ')).includes(t));
+ if(!arr.length)return '<div class="empty">'+(t?'Nada encontrado.':'Nenhuma compra cadastrada ainda.')+'</div>';
+ return arr.map(c=>'<div class="card tap" onclick="app.ver(\''+c.id+'\')"><div class="tot"><b style="font-size:18px">'+fmt(totalCompra(c))+'</b><span>'+fmtData(c.data)+' '+esc(c.hora||'')+'</span></div><div>'+esc(c.estab||'(sem nome)')+'</div><div class="hint">'+c.itens.length+' item(ns)'+(c.numero?' · NF '+esc(c.numero):'')+'</div></div>').join('');
+}
+function verCompra(id){
+ const c=db.compras.find(x=>x.id===id);if(!c)return;
+ const tp=c.tempos;
+ const m=abrirModal('Compra de '+fmtData(c.data),
+ '<div class="kv"><span>Estabelecimento</span><span>'+esc(c.estab||'—')+'</span></div>'
+ +'<div class="kv"><span>Data / hora</span><span>'+fmtData(c.data)+' '+esc(c.hora||'')+'</span></div>'
+ +'<div class="kv"><span>Valor da compra</span><span><b>'+fmt(totalCompra(c))+'</b></span></div>'
+ +(c.total>0&&c.itens.length&&Math.abs(c.total-somaItens(c.itens))>0.009?'<div class="kv"><span>Soma dos itens</span><span>'+fmt(somaItens(c.itens))+'</span></div>':'')
+ +(c.numero?'<div class="kv"><span>Nº da NF-e / série</span><span>'+esc(c.numero)+(c.serie?' / '+esc(c.serie):'')+'</span></div>':'')
+ +(c.cnpj?'<div class="kv"><span>CNPJ</span><span>'+fmtCnpj(c.cnpj)+'</span></div>':'')
+ +(c.chave?'<div class="kv"><span>Chave de acesso</span><span>'+esc(c.chave)+'</span></div>':'')
+ +(c.protocolo?'<div class="kv"><span>Autorização SEFAZ</span><span>'+esc(c.protocolo)+'</span></div>':'')
+ +(c.limite?'<div class="kv"><span>Limite definido</span><span>'+fmt(c.limite)+'</span></div>':'')
+ +(c.obs?'<div class="kv"><span>Obs.</span><span>'+esc(c.obs)+'</span></div>':'')
+ +(tp?'<h3>Tempos</h3>'+TIMERS.filter(d=>tp[d.k]>0).map(d=>'<div class="kv"><span>'+d.nome+'</span><span>'+fmtDur(tp[d.k])+'</span></div>').join(''):'')
+ +'<h3>Itens</h3>'+(c.itens.length?c.itens.slice().sort((a,b)=>cmp(a.nome,b.nome)).map(i=>linhaItem(i,0,false).replace(/<button[^>]*>.*?<\/button>/g,'')).join(''):'<div class="hint">Sem itens cadastrados.</div>')
+ +'<div class="row" style="margin-top:12px"><button class="btn" id="v_ed">✎ Editar</button><button class="btn danger" id="v_ex">Excluir</button></div>');
+ m.el.querySelector('#v_ed').onclick=()=>{m.fechar();formCompra(JSON.parse(JSON.stringify(c)),'editar');};
+ m.el.querySelector('#v_ex').onclick=async()=>{if(await confirmar('Tem certeza que quer excluir a compra de '+fmtData(c.data)+' ('+(c.estab||'sem nome')+')?','Excluir')){db.compras=db.compras.filter(x=>x.id!==id);salvar();m.fechar();render();toast('Compra excluída');}};
+}
+
+/* ====== aba Produtos ====== */
+function viewProd(){return '<input placeholder="🔍 Buscar produto ou código" value="'+esc(q.prod)+'" oninput="app.filtrar(\'prod\',this.value)"><button class="btn ghost" onclick="app.novoProduto()">📷 Escanear para cadastrar produto</button><div id="lista" style="margin-top:8px">'+listaProd()+'</div>';}
+function listaProd(){
+ const t=norm(q.prod);let arr=Object.entries(db.produtos).map(([k,p])=>Object.assign({k},p));
+ if(t)arr=arr.filter(p=>norm(p.nome+' '+p.codigo).includes(t));
+ arr.sort((a,b)=>cmp(a.nome,b.nome));
+ if(!arr.length)return '<div class="empty">'+(t?'Nada encontrado.':'O banco de produtos é preenchido conforme você escaneia e finaliza compras.')+'</div>';
+ return '<div class="card">'+arr.map(p=>'<div class="it" onclick="app.editarProduto(\''+enc(p.k)+'\')" style="cursor:pointer"><div class="nm"><b>'+esc(p.nome)+'</b><small>'+(p.codigo?esc(p.codigo)+' · ':'')+esc(p.unidade||'un')+(p.precoNormal?' · normal '+fmt(p.precoNormal):'')+'</small></div><div class="vl">'+(p.ultimoPreco?fmt(p.ultimoPreco):'—')+'</div></div>').join('')+'</div>';
+}
+function editarProduto(k){
+ const p=db.produtos[k];if(!p)return;
+ const us=['un','kg','g','l','ml','pct','cx'];
+ const m=abrirModal('Produto','<div class="hint">'+(p.codigo?'Código: '+esc(p.codigo):'Sem código de barras')+'</div><label>Nome<input id="p_nome"></label><div class="grid2"><label>Unidade<select id="p_un">'+us.map(u=>'<option>'+u+'</option>').join('')+'</select></label><label>Preço normal (R$)<input id="p_pn" inputmode="decimal"></label></div>'
+ +'<h3>Histórico de preços</h3>'+((p.historico||[]).length?p.historico.slice().reverse().slice(0,12).map(h=>'<div class="kv"><span>'+fmtData(h.d)+' · '+esc(h.e||'—')+'</span><span>'+fmt(h.p)+(h.promo?' <span class="badge">PROMO</span>':'')+'</span></div>').join(''):'<div class="hint">Ainda sem compras registradas.</div>')
+ +'<div class="row" style="margin-top:12px"><button class="btn gold" id="p_ok">Salvar</button><button class="btn danger" id="p_ex">Excluir</button></div>');
+ const g=id=>m.el.querySelector('#'+id);g('p_nome').value=p.nome;g('p_un').value=p.unidade||'un';g('p_pn').value=p.precoNormal?String(p.precoNormal).replace('.',','):'';
+ g('p_ok').onclick=()=>{const n=g('p_nome').value.trim();if(!n){toast('Informe o nome');return;}p.nome=n;p.unidade=g('p_un').value;const pn=parseNum(g('p_pn').value);p.precoNormal=pn>0?pn:0;salvar();m.fechar();render();};
+ g('p_ex').onclick=async()=>{if(await confirmar('Tem certeza que quer excluir o produto "'+p.nome+'"?','Excluir')){delete db.produtos[k];salvar();m.fechar();render();}};
+}
+
+/* ====== aba Estatísticas ====== */
+function viewStats(){
+ const cs=db.compras;if(!cs.length)return '<div class="empty">As estatísticas aparecem depois da primeira compra salva.</div>';
+ const dias=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];const pd=[0,0,0,0,0,0,0],gd=[0,0,0,0,0,0,0];
+ const hs={};const med={casa:[],loja:[],caixa:[],fila:[]};const est={};
+ cs.forEach(c=>{const d=new Date(c.data+'T12:00:00').getDay();pd[d]++;gd[d]+=totalCompra(c);
+  const h=parseInt((c.hora||'').slice(0,2),10);
+  if(!isNaN(h)){hs[h]=hs[h]||{n:0,esp:[]};hs[h].n++;if(c.tempos)hs[h].esp.push((c.tempos.fila||0)+(c.tempos.caixa||0));}
+  if(c.tempos)Object.keys(med).forEach(k=>{if(c.tempos[k]>0)med[k].push(c.tempos[k]);});
+  const e=c.estab||'(sem nome)';est[e]=est[e]||{n:0,v:0};est[e].n++;est[e].v+=totalCompra(c);});
+ const mx=Math.max.apply(null,pd)||1;
+ const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+ let melhor='';const hk=Object.keys(hs).filter(h=>hs[h].esp.length);
+ if(hk.length>1){const b=hk.map(h=>({h:+h,m:avg(hs[h].esp)})).sort((a,b)=>a.m-b.m)[0];melhor='<p class="hint">⭐ Menor espera (fila + caixa) até agora: por volta das <b>'+p2(b.h)+'h</b> (média de '+fmtMin(b.m)+').</p>';}
+ const hmx=Math.max.apply(null,Object.values(hs).map(x=>x.n))||1;
+ return '<div class="card"><h2>Resumo</h2><div class="kv"><span>Compras registradas</span><span>'+cs.length+'</span></div><div class="kv"><span>Total gasto</span><span><b>'+fmt(cs.reduce((s,c)=>s+totalCompra(c),0))+'</b></span></div><div class="kv"><span>Ticket médio</span><span>'+fmt(cs.reduce((s,c)=>s+totalCompra(c),0)/cs.length)+'</span></div></div>'
+ +'<div class="card"><h2>Dia da semana</h2>'+dias.map((n,i)=>'<div class="bar"><span>'+n+'</span><i style="width:'+(pd[i]/mx*100)+'%"></i><b>'+pd[i]+'×</b></div>').join('')+'</div>'
+ +'<div class="card"><h2>Horário das compras</h2>'+Object.keys(hs).sort((a,b)=>a-b).map(h=>'<div class="bar"><span>'+p2(h)+'h</span><i style="width:'+(hs[h].n/hmx*100)+'%"></i><b>'+hs[h].n+'×</b></div>').join('')+melhor+'</div>'
+ +'<div class="card"><h2>Tempos médios</h2>'+TIMERS.map(d=>'<div class="kv"><span>'+d.nome+'</span><span>'+(med[d.k].length?fmtMin(avg(med[d.k])):'—')+'</span></div>').join('')+'</div>'
+ +'<div class="card"><h2>Por estabelecimento</h2>'+Object.entries(est).sort((a,b)=>b[1].v-a[1].v).map(([n,o])=>'<div class="kv"><span>'+esc(n)+' ('+o.n+'×)</span><span>'+fmt(o.v)+'</span></div>').join('')+'</div>';
+}
+
+/* ====== aba Ajustes ====== */
+function viewAjustes(){return '<div class="card"><h2>Limite padrão de gasto</h2><p class="hint">Sugerido ao iniciar cada compra. Deixe em branco para não limitar.</p><input id="a_lim" inputmode="decimal" placeholder="R$ 0,00" value="'+(db.config.limitePadrao?String(db.config.limitePadrao).replace('.',','):'')+'" onchange="app.limitePadrao(this.value)"></div>'
+ +'<div class="card"><h2>Dados</h2><button class="btn ghost" onclick="app.exportar()">⬇️ Exportar backup</button><button class="btn ghost" onclick="document.getElementById(\'imp\').click()">⬆️ Importar backup</button><input type="file" id="imp" accept=".json,application/json" style="display:none" onchange="app.importar(this)"><button class="btn danger" onclick="app.apagarTudo()">Apagar todos os dados</button></div>'
+ +'<button class="btn" onclick="app.sobre()">ℹ️ Sobre / Changelog</button>';}
+
+/* ====== ações ====== */
+const app={
+ aba(a){aba=a;render();window.scrollTo(0,0);},
+ filtrar(k,v){q[k]=v;document.getElementById('lista').innerHTML=k==='notas'?listaNotas():listaProd();},
+ iniciar(){
+  const m=abrirModal('Iniciar compra',dlEstab()+'<label>Estabelecimento<input id="s_est" list="dlEstab" autocomplete="off"></label><label>Limite de gasto (R$, opcional)<input id="s_lim" inputmode="decimal"></label><label><input type="checkbox" id="s_casa" checked>Já iniciar o cronômetro "saída de casa"</label><button class="btn gold big" id="s_ok">Começar</button>');
+  const g=id=>m.el.querySelector('#'+id);if(db.config.limitePadrao)g('s_lim').value=String(db.config.limitePadrao).replace('.',',');
+  g('s_ok').onclick=()=>{const l=parseNum(g('s_lim').value);db.sessao={id:uid(),estab:g('s_est').value.trim(),limite:l>0?l:0,itens:[],timers:novosTimers(),criadoEm:Date.now()};if(g('s_casa').checked)db.sessao.timers.casa.ini=Date.now();salvar();m.fechar();render();};},
+ editarSessao(){const s=db.sessao;
+  const m=abrirModal('Dados da compra',dlEstab()+'<label>Estabelecimento<input id="s_est" list="dlEstab"></label><label>Limite de gasto (R$)<input id="s_lim" inputmode="decimal"></label><button class="btn gold big" id="s_ok">Salvar</button>');
+  const g=id=>m.el.querySelector('#'+id);g('s_est').value=s.estab||'';g('s_lim').value=s.limite?String(s.limite).replace('.',','):'';
+  g('s_ok').onclick=()=>{const l=parseNum(g('s_lim').value);s.estab=g('s_est').value.trim();s.limite=l>0?l:0;salvar();m.fechar();render();};},
+ async cancelarSessao(){if(await confirmar('Tem certeza que quer cancelar esta compra? Os itens lançados serão perdidos.','Cancelar compra')){db.sessao=null;salvar();render();}},
+ timer(k){const t=db.sessao.timers[k];if(t.ini){t.seg.push([t.ini,Date.now()]);t.ini=null;}else t.ini=Date.now();vibra(30);salvar();render();},
+ escanearProduto(){scanner('Escanear produto',cod=>{const p=db.produtos[cod];itemModal({codigo:cod,nome:p?p.nome:'',unidade:p?p.unidade:'un',qtd:1,preco:p&&p.ultimoPreco?p.ultimoPreco:'',precoNormal:p&&p.precoNormal},n=>app.addItem(n),'Novo item');});},
+ itemManual(){itemModal({qtd:1,unidade:'un'},n=>app.addItem(n),'Novo item');},
+ async addItem(it){const s=db.sessao,lim=s.limite||0,novo=somaItens(s.itens)+itemTotal(it);
+  if(lim&&novo>lim){vibra([120,60,120]);if(!await confirmar('Este item faz a compra passar do limite em '+fmt(novo-lim)+'. Adicionar mesmo assim?','Adicionar'))return;}
+  const ex=s.itens.find(x=>chaveProd(x)===chaveProd(it)&&x.preco===it.preco&&!!x.promo===!!it.promo&&x.unidade===it.unidade);
+  if(ex)ex.qtd=Math.round((ex.qtd+it.qtd)*1000)/1000;else s.itens.push(it);
+  lembrarProduto(it);salvar();render();toast('Adicionado: '+it.nome);},
+ editarItem(ix){const s=db.sessao;itemModal(s.itens[ix],n=>{s.itens[ix]=n;lembrarProduto(n);salvar();render();},'Editar item');},
+ async removerItem(ix){const s=db.sessao;if(await confirmar('Tem certeza que quer excluir "'+s.itens[ix].nome+'"?','Excluir')){s.itens.splice(ix,1);salvar();render();}},
+ async passo(ix,d){const s=db.sessao,i=s.itens[ix];const n=i.qtd+d;if(n<=0){app.removerItem(ix);return;}
+  if(d>0&&s.limite&&somaItens(s.itens)+i.preco>s.limite){vibra([120,60,120]);if(!await confirmar('Mais uma unidade passa do limite. Adicionar mesmo assim?','Adicionar'))return;}
+  i.qtd=n;salvar();render();},
+ finalizar(){const s=db.sessao;formCompra({estab:s.estab,itens:JSON.parse(JSON.stringify(s.itens)),limite:s.limite},'sessao');},
+ notaAvulsa(){formCompra({itens:[]},'avulsa');},
+ ver(id){verCompra(id);},
+ novoProduto(){scanner('Cadastrar produto',cod=>{const ex=db.produtos[cod];if(ex){editarProduto(cod);return;}
+  itemModal({codigo:cod,nome:'',unidade:'un',qtd:1,preco:''},n=>{lembrarProduto(n);const p=db.produtos[chaveProd(n)];p.ultimoPreco=n.preco;if(!n.promo)p.precoNormal=n.preco;salvar();render();toast('Produto cadastrado');},'Novo produto');});},
+ editarProduto(k){editarProduto(decodeURIComponent(k));},
+ limitePadrao(v){const n=parseNum(v);db.config.limitePadrao=n>0?n:0;salvar();toast('Limite padrão salvo');},
+ exportar(){const b=new Blob([JSON.stringify(db)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='Fenix_Controle_Compras_backup_'+hoje()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);},
+ importar(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=async()=>{try{const d=JSON.parse(r.result);if(!d||!Array.isArray(d.compras))throw 0;
+  if(await confirmar('Importar este backup substitui todos os dados atuais. Continuar?','Importar')){db=Object.assign(base(),d);salvar();render();toast('Backup restaurado ✔');}}catch(e){toast('Arquivo de backup inválido');}inp.value='';};r.readAsText(f);},
+ apagarTudo(){const m=abrirModal('Apagar todos os dados','<p style="margin-top:0">Isso apaga compras, produtos e configurações deste aparelho. Faça um backup antes. Para confirmar, digite <b>APAGAR</b>.</p><input id="z_t" autocomplete="off"><button class="btn danger" id="z_ok">Apagar tudo</button>');
+  m.el.querySelector('#z_ok').onclick=()=>{if(m.el.querySelector('#z_t').value.trim()!=='APAGAR'){toast('Digite APAGAR para confirmar');return;}db=base();salvar();m.fechar();aba='compra';render();toast('Dados apagados');};},
+ sobre(){abrirModal('Sobre','<h2>Fênix | Controle de Compras</h2><p class="hint">Versão '+VERSAO+'</p><p>Cadastro de notas fiscais e controle de compras, com leitura de código de barras/QR Code pela câmera, banco de produtos, limite de gasto e cronômetros de ida às compras. Os dados ficam neste aparelho; use o backup para guardá-los.</p><h3>Changelog</h3>'+CHANGELOG.map(c=>'<b>v'+c.v+'</b> — '+c.d+'<ul class="chg">'+c.i.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>').join(''));}
+};
+
+/* ====== PWA (manifesto embutido) ====== */
+try{const svg="<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='#041273'/><text x='256' y='350' font-size='300' text-anchor='middle' fill='#f0c850' font-family='Arial' font-weight='700'>F</text></svg>";
+ const man={name:'Fênix | Controle de Compras',short_name:'Compras',start_url:location.href.split('#')[0],display:'standalone',background_color:'#041273',theme_color:'#041273',icons:[{src:'data:image/svg+xml,'+encodeURIComponent(svg),sizes:'any',type:'image/svg+xml'}]};
+ const l=document.createElement('link');l.rel='manifest';l.href=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/manifest+json'}));document.head.appendChild(l);}catch(e){}
+render();
+</script>
+</body>
+</html>

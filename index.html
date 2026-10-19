@@ -76,11 +76,21 @@ textarea{resize:vertical}
 <div id="toast"></div>
 <script type="module">
 'use strict';
-const VERSAO='2.3';
+const VERSAO='2.5';
 const NOME_APP='fenix-compras';
-const CORE_URL='https://fenicris-dev.github.io/Fenix-Core/fenix-core.js';
+const CORE_CDN='https://cdn.jsdelivr.net/gh/fenicris-dev/Fenix_Core@main/fenix-core.js';
+const CORE_URL='https://fenicris-dev.github.io/Fenix_Core/fenix-core.js';
 const CHAVE_V1='fenixControleCompras';
 const CHANGELOG=[
+{v:'2.5',d:'19/10/2026',i:[
+ 'Endereço do fenix-core corrigido: o repositório publicado é Fenix_Core (com sublinhado), e o app apontava para Fenix-Core (com hífen), por isso não conectava.',
+ 'Consulta de CNPJ aceita tanto pessoas.consultarCnpj quanto pessoas.consultarCNPJ do core.'
+]},
+{v:'2.4',d:'19/10/2026',i:[
+ 'Diagnóstico do fenix-core: o aviso do modo offline ganhou "Ver detalhes", que testa o endereço do core e o Firebase e mostra o código de resposta (404, bloqueio, tempo esgotado) e a versão do core publicado.',
+ 'O carregamento tenta o core três vezes (endereço oficial, endereço sem cache e, como reserva, a mesma cópia do repositório pelo jsDelivr).',
+ 'Se o core publicado for antigo e não tiver o módulo de sincronia, o app avisa o motivo em vez de falhar em silêncio.'
+]},
 {v:'2.3',d:'19/10/2026',i:[
  'Código de barras (EAN/GTIN) consulta o Open Food Facts: preenche nome, marca e conteúdo da embalagem (400 g, 1 L…). Você confere antes de salvar; se não achar, o cadastro segue manual.',
  'Botão "🔎 Buscar dados" no item e no produto para consultar a qualquer momento. O resultado fica salvo no produto e não é consultado de novo.',
@@ -369,7 +379,7 @@ function render(){
  const v={compra:viewCompra,lista:viewLista,notas:viewNotas,prod:viewProd,stats:viewStats,ajustes:viewAjustes}[aba];
  main.innerHTML=(modoLocal?bannerLocal():'')+v();
 }
-function bannerLocal(){const n=filaTotal();return '<div class="card" style="border-left:4px solid var(--gold)"><b>📴 Modo offline</b><p class="hint" style="margin:6px 0">Os dados estão sendo guardados neste aparelho'+(n?' ('+n+' alteração(ões) aguardando envio)':'')+' e sobem para a nuvem quando você conectar.'+(motivoLocal?' <small>('+esc(motivoLocal)+')</small>':'')+'</p><button class="btn ghost sm" onclick="app.conectar()">Conectar agora</button></div>';}
+function bannerLocal(){const n=filaTotal();return '<div class="card" style="border-left:4px solid var(--gold)"><b>📴 Modo offline</b><p class="hint" style="margin:6px 0">Os dados estão sendo guardados neste aparelho'+(n?' ('+n+' alteração(ões) aguardando envio)':'')+' e sobem para a nuvem quando você conectar.'+(motivoLocal?' <small>('+esc(motivoLocal)+')</small>':'')+'</p><div class="row"><button class="btn ghost sm" onclick="app.conectar()">Conectar agora</button><button class="btn ghost sm" onclick="app.detalhes()">Ver detalhes</button></div></div>';}
 let rt;function agendarRender(){clearTimeout(rt);rt=setTimeout(refrescar,90);}
 function refrescar(){
  if(!usuario)return;
@@ -520,6 +530,7 @@ const endTxt=e=>[(e.logradouro||'')+(e.numero?', '+e.numero:''),e.bairro,(e.cida
 /* padrão Fênix: todo CNPJ capturado preenche razão social e localização (fenix-core v2.4: pessoas.consultarCnpj) */
 async function consultarCnpj(cnpj){
  if(FC&&FC.pessoas&&FC.pessoas.consultarCnpj)return FC.pessoas.consultarCnpj(cnpj);
+ if(FC&&FC.pessoas&&FC.pessoas.consultarCNPJ)return FC.pessoas.consultarCNPJ(cnpj);
  const limpo=FC.limparDocumento(cnpj);if(!FC.validarCNPJ(limpo))throw new Error('CNPJ inválido');
  try{const ex=await FC.pessoas.buscar(limpo);if(ex&&ex.razaoSocial)return Object.assign({},ex,{endereco:ex.endereco||{},origem:'core'});}catch(e){}
  const r=await FC.pessoas.buscarNaReceita(limpo);if(!r)return null;try{await FC.pessoas.salvarJuridica(r);}catch(e){}return r;}
@@ -878,6 +889,8 @@ const app={
  exportar(){if(FC&&FC.backup)FC.backup.baixarJSON(NOME_APP,dadosBackup());else{const b=new Blob([JSON.stringify(dadosBackup(),null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='fenix-compras-backup-'+hoje()+'.json';document.body.appendChild(a);a.click();a.remove();}},
  async conectar(){if(authMod&&FC){modoLocal=false;saiu();return;}toast('Conectando…');try{await carregarCore();}catch(e){motivoLocal=msgCore(e);toast('Ainda sem conexão com o core');render();return;}
   modoLocal=false;sinc=null;usuario=null;filaDrenada=false;try{iniciarNuvem();}catch(e){console.error(e);modoLocal=true;toast('Erro ao iniciar a nuvem: '+(e.message||e));}},
+async detalhes(){const m=abrirModal('Detalhes da conexão','<p class="hint" style="margin-top:0">Resultado dos testes de rede. Se pedir ajuda, mande estas linhas.</p><pre id="dg_t" style="white-space:pre-wrap;font-size:12.5px;margin:0">Testando…</pre>');
+  const l=await diagnosticar();diagLinhas=l;const t=l.join('\n')+(coreFonte?'\nCore carregado de: '+coreFonte:'')+(motivoLocal?'\nMotivo: '+motivoLocal:'');const el=m.el.querySelector('#dg_t');if(el)el.textContent=t;},
  offline(){iniciarLocal('modo escolhido na tela de login');},
  importar(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=async()=>{try{const d=JSON.parse(r.result);if(!d||!Array.isArray(d.compras))throw 0;
   if(await confirmar('Importar este backup envia os dados dele para a nuvem (itens com o mesmo código são atualizados). Continuar?','Importar')){toast('Importando…');await enviarParaNuvem(d);toast('Backup importado ✔');}}catch(e){toast('Arquivo de backup inválido');}inp.value='';};r.readAsText(f);},
@@ -903,11 +916,26 @@ function entrou(u){
 }
 function saiu(){cancelar.forEach(f=>{try{f();}catch(e){}});cancelar=[];usuario=null;sinc=null;modoLocal=false;db=base();carregado={};telaLogin();}
 
-const msgCore=e=>{const m=String((e&&e.message)||e||'erro');return /tempo/i.test(m)?'o fenix-core demorou demais':(navigator.onLine===false?'sem internet':'não foi possível carregar o fenix-core: '+m.slice(0,90));};
+const msgCore=e=>{const m=String((e&&e.message)||e||'erro');return /tempo/i.test(m)?'o fenix-core demorou demais':(navigator.onLine===false?'sem internet':'não foi possível carregar o fenix-core: '+m.slice(0,60));};
+let coreFonte='',diagLinhas=null;
 async function carregarCore(){
- const mod=await Promise.race([import(CORE_URL),new Promise((_,rej)=>setTimeout(()=>rej(new Error('tempo esgotado')),10000))]);
- FC=mod.FenixCore;if(!FC)throw new Error('core sem FenixCore');}
+ const fontes=[CORE_URL,CORE_URL+'?v='+Date.now(),CORE_CDN];let ultimo=null;
+ for(const u of fontes){
+  try{const mod=await Promise.race([import(u),new Promise((_,rej)=>setTimeout(()=>rej(new Error('tempo esgotado')),10000))]);
+   FC=mod.FenixCore;if(!FC)throw new Error('o arquivo não exporta FenixCore');coreFonte=u===CORE_CDN?'jsDelivr (reserva)':'oficial';return;}
+  catch(e){ultimo=e;console.warn('core falhou em',u,e);}}
+ throw ultimo||new Error('falha ao carregar o core');}
+async function diagnosticar(){
+ const L=[];
+ const t=async(nome,url)=>{try{const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),8000);const r=await fetch(url,{cache:'no-store',signal:ctl.signal});clearTimeout(to);let ex='';if(r.ok){const tx=(await r.text()).slice(0,3000);const m=tx.match(/CORE v(\d+\.\d+)/i);ex=' · tipo '+(r.headers.get('content-type')||'?')+(m?' · versão '+m[1]:'');}L.push(nome+': HTTP '+r.status+ex);}catch(e){L.push(nome+': falhou ('+(e&&e.name==='AbortError'?'tempo esgotado':'bloqueado, CORS ou sem rede')+')');}};
+ await t('fenix-core.js (oficial)',CORE_URL);
+ await t('fenix-core.js (jsDelivr)',CORE_CDN);
+ await t('Firebase (gstatic)','https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+ L.push('Navegador: '+(navigator.onLine?'online':'offline')+' · origem da página: '+location.origin);
+ L.push('Endereço testado: '+CORE_URL);
+ return L;}
 function iniciarNuvem(){
+ if(!FC.initFirebaseComCache||!FC.criarModuloAuth||!FC.criarModuloSincronia)throw new Error('o fenix-core publicado é antigo: falta '+(!FC.criarModuloSincronia?'criarModuloSincronia':!FC.initFirebaseComCache?'initFirebaseComCache':'criarModuloAuth')+' (publique o fenix-core v2.3 ou superior)');
  const r=FC.initFirebaseComCache();FC.init(NOME_APP);dbFire=r.db;authMod=FC.criarModuloAuth(r.app);
  try{FC.sobre.registrarAcesso(NOME_APP,'v'+VERSAO);}catch(e){}
  authMod.aoMudarEstado(u=>{if(u)entrou(u);else saiu();});}
@@ -923,7 +951,7 @@ async function boot(){
  const main=document.getElementById('main');
  if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
  try{await carregarCore();}
- catch(e){console.error(e);iniciarLocal(msgCore(e));return;}
+ catch(e){console.error(e);iniciarLocal(msgCore(e));diagnosticar().then(l=>{diagLinhas=l;}).catch(()=>{});return;}
  try{iniciarNuvem();}
  catch(e){console.error(e);iniciarLocal('erro ao iniciar o Firebase: '+String((e&&e.message)||e).slice(0,90));}
 }

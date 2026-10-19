@@ -64,6 +64,7 @@ ul.chg{padding-left:18px;margin:4px 0}
 .login{max-width:380px;margin:30px auto}.login h2{text-align:center;color:var(--navy)}
 .err{color:var(--red);font-size:13px;min-height:18px;margin:6px 0}
 .link{background:none;border:0;color:var(--navy);text-decoration:underline;font-size:14px;padding:6px;width:100%}
+.th{width:44px;height:44px;border-radius:8px;object-fit:cover;background:#eee;flex:none}
 .lk{background:none;border:0;color:var(--navy);text-decoration:underline;font-size:12px;padding:6px 0 0;width:100%}
 textarea{resize:vertical}
 </style>
@@ -75,11 +76,18 @@ textarea{resize:vertical}
 <div id="toast"></div>
 <script type="module">
 'use strict';
-const VERSAO='2.2';
+const VERSAO='2.3';
 const NOME_APP='fenix-compras';
 const CORE_URL='https://fenicris-dev.github.io/Fenix-Core/fenix-core.js';
 const CHAVE_V1='fenixControleCompras';
 const CHANGELOG=[
+{v:'2.3',d:'19/10/2026',i:[
+ 'Código de barras (EAN/GTIN) consulta o Open Food Facts: preenche nome, marca e conteúdo da embalagem (400 g, 1 L…). Você confere antes de salvar; se não achar, o cadastro segue manual.',
+ 'Botão "🔎 Buscar dados" no item e no produto para consultar a qualquer momento. O resultado fica salvo no produto e não é consultado de novo.',
+ 'Foto do produto: "📷 Foto" abre a câmera do celular; a foto é reduzida e sincronizada com a nuvem junto com o produto.',
+ 'Regra das fotos: contas Fênix (e-mail com "fenix" @gmail.com) também usam a foto da internet; nas demais contas só vale a foto tirada pelo próprio usuário.',
+ 'Miniatura da foto na lista de itens, nas notas e na lista de produtos; produto ganhou o campo Marca.'
+]},
 {v:'2.2',d:'19/10/2026',i:[
  'Funciona offline de verdade: se o fenix-core ou a internet falharem, o app não trava mais. Ele abre em "modo offline" com os dados salvos no aparelho e mostra o motivo.',
  'No modo offline, tudo que você registra (compras, produtos, lista, cronômetros) fica numa fila no aparelho e é enviado para a nuvem sozinho quando você entrar de novo com conexão.',
@@ -121,6 +129,31 @@ function configPadrao(){return{categorias:[{id:'casa',nome:'Para casa',recorrent
 function base(){return{produtos:{},compras:[],estabs:{},lista:[],sessao:null,config:configPadrao()};}
 let db=base();
 /* ====== modo offline: espelho local + fila de alterações ====== */
+/* ====== foto e dados do produto (Open Food Facts) ====== */
+const permiteWeb=()=>!!(usuario&&!modoLocal&&/^.*fenix.*@gmail\.com$/i.test(String(usuario.email||'')));
+const infoPend={};
+const fotoDe=p=>p?(p.foto||(permiteWeb()&&p.fotoUrl)||''):'';
+const fotoItem=i=>fotoDe(db.produtos[chaveProd(i)]);
+const thImg=src=>src?'<img class="th" loading="lazy" referrerpolicy="no-referrer" src="'+esc(src)+'" alt="" onerror="this.style.display=\'none\'">':'';
+function redimensionar(blob,max){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=()=>rej(new Error('leitura'));r.onload=()=>{const im=new Image();im.onerror=()=>rej(new Error('imagem'));im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*k));c.height=Math.max(1,Math.round(im.height*k));c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',0.7));};im.src=r.result;};r.readAsDataURL(blob);});}
+function escolherFoto(cb){const i=document.createElement('input');i.type='file';i.accept='image/*';i.setAttribute('capture','environment');i.style.display='none';i.onchange=async()=>{const f=i.files&&i.files[0];i.remove();if(!f)return;try{cb(await redimensionar(f,360));}catch(e){toast('Não consegui ler a foto');}};document.body.appendChild(i);i.click();}
+const ehEAN=c=>/^\d{8,14}$/.test(String(c||'').trim());
+function conteudoOFF(p){
+ let v=parseFloat(p.product_quantity),u=String(p.product_quantity_unit||'').toLowerCase();
+ if(!(v>0)){const m=String(p.quantity||'').replace(',','.').match(/(\d+(?:\.\d+)?)\s*(kg|g|mg|ml|cl|dl|l|lt|un|unid|unidades?)\b/i);if(m){v=parseFloat(m[1]);u=m[2].toLowerCase();}}
+ if(!(v>0))return null;
+ if(u==='mg'){v/=1000;u='g';}else if(u==='cl'){v*=10;u='ml';}else if(u==='dl'){v*=100;u='ml';}else if(u==='l'||u==='lt'){u='L';}else if(/^un/.test(u)){u='un';}
+ if(u==='g'&&v>=1000){v/=1000;u='kg';}if(u==='ml'&&v>=1000){v/=1000;u='L';}
+ if(!UN_CONT.includes(u))return null;
+ return{v:Math.round(v*1000)/1000,u};}
+async function buscarOFF(cod){
+ const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),9000);
+ try{const r=await fetch('https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(cod)+'.json?fields=product_name,product_name_pt,generic_name,brands,quantity,product_quantity,product_quantity_unit,image_front_small_url,image_front_url',{signal:ctl.signal});
+  if(!r.ok)return null;const j=await r.json();if(!j||j.status!==1||!j.product)return null;const p=j.product;
+  const nome=String(p.product_name_pt||p.product_name||p.generic_name||'').trim();if(!nome)return null;
+  return{nome,marca:String(p.brands||'').split(',')[0].trim(),conteudo:conteudoOFF(p),fotoUrl:p.image_front_small_url||p.image_front_url||''};}
+ finally{clearTimeout(t);}}
+async function fotoDaWeb(url){try{const r=await fetch(url);if(!r.ok)return '';return await redimensionar(await r.blob(),360);}catch(e){return '';}}
 const LS_ESP='fenixCompras_espelho',LS_FILA='fenixCompras_fila';
 let modoLocal=false,motivoLocal='',uidLocal=null,filaDrenada=false;
 const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}};
@@ -371,7 +404,7 @@ function blocoLista(comAdd){
  return '<div class="card" style="margin-top:10px"><h2>📝 Na lista de compras ('+p.length+')</h2>'+p.map(o=>'<div class="it"><div class="nm"><b>'+esc(o.nome)+'</b><small>'+esc(o.info)+'</small></div>'+(comAdd?'<button class="ic g" onclick="app.daLista(\''+enc(o.ref)+'\')">＋</button>':'')+'</div>').join('')+'</div>';}
 function linhaItem(i,ix,passos){
  const cont=modoDe(i)!=='peso'&&['un','pct','cx'].includes(i.unidade);
- return '<div class="it"><div class="nm"><b>'+esc(i.nome)+(i.promo?'<span class="badge">PROMO</span>':'')+(i.recorrente?'<span class="badge b2">🔁</span>':'')+'</b><small>'+esc(descItem(i))+(i.cat?' · '+esc(catNome(i.cat)):'')+(i.codigo?' · '+esc(i.codigo):'')+'</small></div><div class="vl">'+fmt(itemTotal(i))+'</div>'
+ return '<div class="it">'+thImg(fotoItem(i))+'<div class="nm"><b>'+esc(i.nome)+(i.promo?'<span class="badge">PROMO</span>':'')+(i.recorrente?'<span class="badge b2">🔁</span>':'')+'</b><small>'+esc(descItem(i))+(i.cat?' · '+esc(catNome(i.cat)):'')+(i.codigo?' · '+esc(i.codigo):'')+'</small></div><div class="vl">'+fmt(itemTotal(i))+'</div>'
  +(passos&&cont?'<button class="ic" onclick="app.passo('+ix+',-1)">−</button><button class="ic" onclick="app.passo('+ix+',1)">+</button>':'')
  +(passos?'<button class="ic" onclick="app.editarItem('+ix+')">✎</button><button class="ic r" onclick="app.removerItem('+ix+')">✕</button>':'')+'</div>';
 }
@@ -384,8 +417,10 @@ function itemModal(it,cb,titulo){
  const nomes=Object.values(db.produtos).map(p=>p.nome).sort(cmp);
  const iv=pr?intervalo(pr):0;
  let modo=modoDe(it),fixo=!!it.totalItem;
+ let foto=(pr&&pr.foto)||'',fotoUrl=(pr&&pr.fotoUrl)||'',marca=(pr&&pr.marca)||'';
  const m=abrirModal(titulo||'Item','<div class="hint">'+(ult?'Última vez: '+fmt(ult.p)+(ult.pb?' ('+fmt(ult.pb)+'/'+esc(ult.bu)+')':'')+(ult.promo?' (promoção)':'')+(ult.e?' em '+esc(ult.e):'')+' · '+fmtData(ult.d):(pr?'Produto já cadastrado.':'Produto novo — será lembrado nas próximas compras.'))+'</div>'
  +'<label>Código de barras / QR<input id="i_cod" inputmode="numeric" autocomplete="off"></label>'
+ +'<div class="row" style="align-items:center"><div id="i_th"></div><button type="button" class="btn ghost sm" id="i_foto">📷 Foto</button><button type="button" class="btn ghost sm" id="i_web">🔎 Buscar dados</button></div><div class="hint" id="i_net"></div>'
  +'<label>Nome do produto<input id="i_nome" list="dlProd" autocomplete="off"></label><datalist id="dlProd">'+nomes.map(n=>'<option value="'+esc(n)+'">').join('')+'</datalist>'
  +'<div class="row" style="margin-top:10px"><button type="button" class="btn sm" id="i_m1">📦 Por embalagem</button><button type="button" class="btn sm" id="i_m2">⚖️ Por peso / volume</button></div>'
  +'<div id="i_emb"><div class="grid2"><label>Qtd. de embalagens<input id="i_qtd" inputmode="decimal"></label><label>Preço da embalagem (R$)<input id="i_preco" inputmode="decimal"></label></div>'
@@ -434,7 +469,25 @@ function itemModal(it,cb,titulo){
   if(modoDe(p)==='peso'){setModo('peso');g('i_base').value=unBase(p.unidade)==='L'?'L':'kg';unidadesPeso();if(!g('i_pk').value&&p.ultimoPreco)g('i_pk').value=txt(p.ultimoPreco);}
   else{setModo('emb');if(p.conteudo&&!g('i_cv').value){g('i_cv').value=txt(p.conteudo.v);g('i_cu').value=p.conteudo.u;listaConteudo();}if(!g('i_preco').value&&p.ultimoPreco)g('i_preco').value=txt(p.ultimoPreco);}
   if(p.precoNormal&&!g('i_pn').value)g('i_pn').value=txt(p.precoNormal);if(p.cat&&!g('i_cat').value)g('i_cat').value=p.cat;if(p.recorrente)g('i_rec').checked=true;visRec();ppb();};
- g('i_cod').onchange=()=>auto(db.produtos[g('i_cod').value.trim()]);
+ const desenharFoto=()=>{g('i_th').innerHTML=thImg(foto||(permiteWeb()&&fotoUrl)||'');};desenharFoto();
+ async function buscarNet(auto){
+  const cod=g('i_cod').value.trim();
+  if(!ehEAN(cod)){if(!auto)toast('Digite ou escaneie o código de barras (8 a 14 dígitos).');return;}
+  if(navigator.onLine===false){g('i_net').textContent=auto?'':'Sem internet agora.';return;}
+  g('i_net').textContent='Buscando dados do produto…';
+  try{const d=await buscarOFF(cod);
+   if(!d){g('i_net').textContent='Produto não encontrado no Open Food Facts. Preencha à mão'+(foto?'.':' e, se quiser, tire uma foto.');return;}
+   if(!g('i_nome').value)g('i_nome').value=tit(d.nome);
+   if(d.marca)marca=d.marca;
+   if(modo==='emb'&&d.conteudo&&!g('i_cv').value){g('i_cv').value=txt(d.conteudo.v);g('i_cu').value=d.conteudo.u;listaConteudo();ppb();}
+   if(d.fotoUrl&&permiteWeb()){fotoUrl=d.fotoUrl;if(!foto){const w=await fotoDaWeb(d.fotoUrl);if(w)foto=w;}}
+   desenharFoto();
+   g('i_net').textContent='Dados do Open Food Facts'+(d.marca?' · '+d.marca:'')+'. Confira antes de salvar.'+(!permiteWeb()&&!foto?' Nesta conta a foto vale só se você tirar a sua.':'');
+  }catch(e){g('i_net').textContent='Não consegui consultar agora. Preencha à mão.';}}
+ g('i_web').onclick=()=>buscarNet(false);
+ g('i_foto').onclick=()=>escolherFoto(d=>{foto=d;desenharFoto();toast('Foto adicionada');});
+ if(!pr&&ehEAN(it.codigo)&&!it.nome)setTimeout(()=>buscarNet(true),250);
+ g('i_cod').onchange=()=>{const px=db.produtos[g('i_cod').value.trim()];auto(px);if(px){foto=px.foto||foto;fotoUrl=px.fotoUrl||fotoUrl;marca=px.marca||marca;desenharFoto();}else buscarNet(true);};
  g('i_nome').onchange=()=>{const k='nome:'+norm(g('i_nome').value).trim();const p=db.produtos[k]||Object.values(db.produtos).find(x=>norm(x.nome)===norm(g('i_nome').value));auto(p);};
  g('i_ok').onclick=()=>{
   const nome=tit(g('i_nome').value.trim()),promo=g('i_promo').checked,pn=parseNum(g('i_pn').value);
@@ -450,10 +503,11 @@ function itemModal(it,cb,titulo){
    out={modo:'peso',unidade:g('i_base').value,qtd:Math.round(pv*1000)/1000,preco:pk,conteudo:null};
    if(fixo&&pt>0)out.totalItem=arred(pt);}
   Object.assign(out,{codigo:g('i_cod').value.trim(),nome,promo,precoNormal:promo&&pn>0?pn:null,cat:g('i_cat').value,recorrente:g('i_rec').checked});
+  infoPend[chaveProd(out)]={foto,fotoUrl:permiteWeb()?fotoUrl:'',marca};
   m.fechar();cb(out);};
  setTimeout(()=>{(!g('i_nome').value?g('i_nome'):modo==='peso'?g('i_pv'):g('i_preco')).focus();},150);
 }
-function lembrarProduto(it){const k=chaveProd(it);const p=db.produtos[k]||{codigo:it.codigo||'',historico:[]};const modo=modoDe(it);p.nome=it.nome;p.modo=modo;p.unidade=modo==='peso'?unBase(it.unidade):'un';p.conteudo=modo==='emb'&&it.conteudo?it.conteudo:null;if(it.precoNormal&&!p.precoNormal)p.precoNormal=it.precoNormal;if(it.cat)p.cat=it.cat;if(it.recorrente!==undefined)p.recorrente=!!it.recorrente;db.produtos[k]=p;gravarProduto(k);}
+function lembrarProduto(it){const k=chaveProd(it);const p=db.produtos[k]||{codigo:it.codigo||'',historico:[]};const modo=modoDe(it);p.nome=it.nome;p.modo=modo;p.unidade=modo==='peso'?unBase(it.unidade):'un';p.conteudo=modo==='emb'&&it.conteudo?it.conteudo:null;if(it.precoNormal&&!p.precoNormal)p.precoNormal=it.precoNormal;if(it.cat)p.cat=it.cat;if(it.recorrente!==undefined)p.recorrente=!!it.recorrente;const inf=infoPend[k];if(inf){if(inf.foto)p.foto=inf.foto;if(inf.fotoUrl)p.fotoUrl=inf.fotoUrl;if(inf.marca)p.marca=inf.marca;delete infoPend[k];}db.produtos[k]=p;gravarProduto(k);}
 function registrarPrecos(c){
  c.itens.forEach(it=>{lembrarProduto(it);const k=chaveProd(it),p=db.produtos[k],pb=precoBase(it);p.ultimoPreco=it.preco;p.ultimaQtd=it.qtd;if(!it.promo)p.precoNormal=it.preco;p.puladoAte=null;
   const h={d:c.data,e:c.estab||'',p:it.preco,q:it.qtd,promo:!!it.promo};if(pb){h.pb=Math.round(pb.valor*100)/100;h.bu=pb.un;}
@@ -647,12 +701,12 @@ function listaProd(){
  if(t)arr=arr.filter(p=>norm(p.nome+' '+p.codigo).includes(t));
  arr.sort((a,b)=>cmp(a.nome,b.nome));
  if(!arr.length)return '<div class="empty">'+(t?'Nada encontrado.':'O banco de produtos é preenchido conforme você escaneia e finaliza compras.')+'</div>';
- return '<div class="card">'+arr.map(p=>{const iv=p.recorrente?intervalo(p):0;return '<div class="it" onclick="app.editarProduto(\''+enc(p.k)+'\')" style="cursor:pointer"><div class="nm"><b>'+esc(p.nome)+(p.recorrente?'<span class="badge b2">🔁'+(iv>0?' ~'+iv+'d':'')+'</span>':'')+'</b><small>'+(p.codigo?esc(p.codigo)+' · ':'')+esc(descProd(p))+(p.precoNormal?' · normal '+fmt(p.precoNormal):'')+(p.cat?' · '+esc(catNome(p.cat)):'')+'</small></div><div class="vl">'+(p.ultimoPreco?fmt(p.ultimoPreco)+(pbTxt(p)?'<br><small style="font-weight:400;color:var(--mut)">'+pbTxt(p)+'</small>':''):'—')+'</div></div>';}).join('')+'</div>';
+ return '<div class="card">'+arr.map(p=>{const iv=p.recorrente?intervalo(p):0;return '<div class="it" onclick="app.editarProduto(\''+enc(p.k)+'\')" style="cursor:pointer">'+thImg(fotoDe(p))+'<div class="nm"><b>'+esc(p.nome)+(p.recorrente?'<span class="badge b2">🔁'+(iv>0?' ~'+iv+'d':'')+'</span>':'')+'</b><small>'+(p.codigo?esc(p.codigo)+' · ':'')+esc(descProd(p))+(p.precoNormal?' · normal '+fmt(p.precoNormal):'')+(p.cat?' · '+esc(catNome(p.cat)):'')+'</small></div><div class="vl">'+(p.ultimoPreco?fmt(p.ultimoPreco)+(pbTxt(p)?'<br><small style="font-weight:400;color:var(--mut)">'+pbTxt(p)+'</small>':''):'—')+'</div></div>';}).join('')+'</div>';
 }
 function editarProduto(k){
  const p=db.produtos[k];if(!p)return;
  const auto=intervaloAuto(p),ult=ultimaData(p);
- const m=abrirModal('Produto','<div class="hint">'+(p.codigo?'Código: '+esc(p.codigo):'Sem código de barras')+'</div><label>Nome<input id="p_nome"></label>'
+ const m=abrirModal('Produto','<div class="hint">'+(p.codigo?'Código: '+esc(p.codigo):'Sem código de barras')+'</div><div class="row" style="align-items:center"><div id="p_th"></div><button class="btn ghost sm" id="p_foto">📷 Foto</button><button class="btn ghost sm" id="p_fx">Remover foto</button>'+(ehEAN(p.codigo)?'<button class="btn ghost sm" id="p_web">🔎 Buscar dados</button>':'')+'</div><div class="hint" id="p_net"></div><label>Nome<input id="p_nome"></label><label>Marca<input id="p_marca"></label>'
  +'<label>Como é vendido<select id="p_modo"><option value="emb">📦 Por embalagem</option><option value="peso">⚖️ Por peso / volume</option></select></label>'
  +'<div id="p_embw" class="grid2"><label>Conteúdo da embalagem<input id="p_cv" inputmode="decimal"></label><label>Medida<select id="p_cu">'+UN_CONT.map(u=>'<option>'+u+'</option>').join('')+'</select></label></div>'
  +'<div id="p_pesw"><label>Vendido por<select id="p_base"><option value="kg">quilo (kg)</option><option value="L">litro (L)</option></select></label></div>'
@@ -663,6 +717,12 @@ function editarProduto(k){
  +'<h3>Histórico de preços</h3>'+((p.historico||[]).length?p.historico.slice().reverse().slice(0,12).map(h=>'<div class="kv"><span>'+fmtData(h.d)+' · '+esc(h.e||'—')+'</span><span>'+(h.q?fq(h.q)+' × ':'')+fmt(h.p)+(h.pb?' ('+fmt(h.pb)+'/'+esc(h.bu)+')':'')+(h.promo?' <span class="badge">PROMO</span>':'')+'</span></div>').join(''):'<div class="hint">Ainda sem compras registradas.</div>')
  +'<div class="row" style="margin-top:12px"><button class="btn gold" id="p_ok">Salvar</button><button class="btn danger" id="p_ex">Excluir</button></div>');
  const g=id=>m.el.querySelector('#'+id);
+ let foto=p.foto||'',fotoUrl=p.fotoUrl||'';
+ g('p_marca').value=p.marca||'';
+ const desP=()=>{g('p_th').innerHTML=thImg(foto||(permiteWeb()&&fotoUrl)||'');g('p_fx').style.display=(foto||fotoUrl)?'':'none';};desP();
+ g('p_foto').onclick=()=>escolherFoto(d=>{foto=d;desP();});
+ g('p_fx').onclick=async()=>{if(await confirmar('Tem certeza que quer excluir a foto de "'+p.nome+'"?','Excluir')){foto='';fotoUrl='';desP();}};
+ if(g('p_web'))g('p_web').onclick=async()=>{g('p_net').textContent='Buscando…';try{const d=await buscarOFF(p.codigo);if(!d){g('p_net').textContent='Produto não encontrado no Open Food Facts.';return;}if(d.marca)g('p_marca').value=d.marca;if(d.conteudo&&!g('p_cv').value&&g('p_modo').value==='emb'){g('p_cv').value=String(d.conteudo.v).replace('.',',');g('p_cu').value=d.conteudo.u;}if(d.fotoUrl&&permiteWeb()){fotoUrl=d.fotoUrl;if(!foto){const w=await fotoDaWeb(d.fotoUrl);if(w)foto=w;}}desP();g('p_net').textContent='Dados do Open Food Facts carregados. Toque em Salvar para guardar.';}catch(e){g('p_net').textContent='Não consegui consultar agora.';}};
  g('p_nome').value=p.nome;g('p_modo').value=modoDe(p);g('p_cv').value=p.conteudo?String(p.conteudo.v).replace('.',','):'';g('p_cu').value=p.conteudo?p.conteudo.u:'g';g('p_base').value=unBase(p.unidade)==='L'?'L':'kg';
  g('p_pn').value=p.precoNormal?String(p.precoNormal).replace('.',','):'';
  g('p_cat').innerHTML=opcoesCat();g('p_cat').value=p.cat||'';ligarCat(g('p_cat'));g('p_rec').checked=!!p.recorrente;g('p_iv').value=p.intervaloManual>0?p.intervaloManual:'';
@@ -670,7 +730,7 @@ function editarProduto(k){
  const vis=()=>{g('p_recw').style.display=g('p_rec').checked?'block':'none';};vis();g('p_rec').onchange=vis;
  g('p_ok').onclick=()=>{const n=tit(g('p_nome').value.trim());if(!n){toast('Informe o nome');return;}
   const modo=g('p_modo').value,cv=parseNum(g('p_cv').value),pn=parseNum(g('p_pn').value),iv=parseInt(g('p_iv').value,10);
-  const np=Object.assign({},p,{nome:n,modo,unidade:modo==='peso'?g('p_base').value:'un',conteudo:modo==='emb'&&cv>0?{v:cv,u:g('p_cu').value}:null,precoNormal:pn>0?pn:0,cat:g('p_cat').value,recorrente:g('p_rec').checked,intervaloManual:iv>0?iv:0});
+  const np=Object.assign({},p,{foto,fotoUrl,marca:g('p_marca').value.trim(),nome:n,modo,unidade:modo==='peso'?g('p_base').value:'un',conteudo:modo==='emb'&&cv>0?{v:cv,u:g('p_cu').value}:null,precoNormal:pn>0?pn:0,cat:g('p_cat').value,recorrente:g('p_rec').checked,intervaloManual:iv>0?iv:0});
   const nk=chaveProd({codigo:np.codigo,nome:np.nome,modo:np.modo,unidade:np.unidade,conteudo:np.conteudo});
   if(nk!==k){if(db.produtos[nk]){toast('Já existe um produto com esse nome e conteúdo');return;}const antigo=p.id||pid(k);delete db.produtos[k];apagarDoc('produtos',antigo);}
   db.produtos[nk]=np;gravarProduto(nk);m.fechar();render();};

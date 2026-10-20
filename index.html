@@ -84,13 +84,19 @@ textarea{resize:vertical}
 <div id="toast"></div>
 <script type="module">
 'use strict';
-const VERSAO='2.6';
+const VERSAO='2.7';
 const NOME_APP='fenix-compras';
 const BASE_FENIX='https://fenicris-dev.github.io/Fenix-Core/';
 const CORE_URL=BASE_FENIX+'fenix-core.js';
 const FIREBASE_V='10.12.2',GS='https://www.gstatic.com/firebasejs/'+FIREBASE_V+'/';
 const CHAVE_V1='fenixControleCompras';
 const CHANGELOG=[
+{v:'2.7',d:'20/10/2026',i:[
+ 'Cadastro de produtos sem entrar numa compra: leia o código de barras/QR (ou digite) e informe nome, foto, embalagem e preço de referência. O produto só fica guardado no banco, sem ir para o carrinho.',
+ 'Ao ler um código durante a compra, o app pergunta: "🛒 Colocar na compra" ou "📦 Só cadastrar produto".',
+ 'Tela de Produtos: botões "Escanear" e "Digitar sem código"; a tela inicial de Compra também ganhou "📦 Cadastrar produtos".',
+ 'No cadastro não aparecem quantidade nem peso comprado, e o preço é opcional.'
+]},
 {v:'2.6',d:'20/10/2026',i:[
  'Segue o Livro das Regras Fênix v3.4 e os caminhos oficiais do repositório Fenix-Core: core, ícones, logos, Termos de Uso e Política de Privacidade.',
  'Endereço do core corrigido para https://fenicris-dev.github.io/Fenix-Core/fenix-core.js (com hífen). Os endereços com sublinhado e o jsDelivr foram removidos.',
@@ -411,7 +417,7 @@ function dlEstab(){return '<datalist id="dlEstab">'+nomesEstab().map(n=>'<option
 /* ====== aba Compra ====== */
 function viewCompra(){
  const s=db.sessao;
- if(!s)return '<div class="card center"><h2>Nenhuma compra em andamento</h2><p class="hint">Inicie a compra ao sair de casa ou ao chegar ao estabelecimento. Os itens, o total e os cronômetros ficam aqui e aparecem em todos os seus aparelhos.</p><button class="btn gold big" onclick="app.iniciar()">🛒 Iniciar compra</button><button class="btn ghost" onclick="app.notaAvulsa()">🧾 Cadastrar nota avulsa (pelo QR Code)</button></div>'+blocoLista(false);
+ if(!s)return '<div class="card center"><h2>Nenhuma compra em andamento</h2><p class="hint">Inicie a compra ao sair de casa ou ao chegar ao estabelecimento. Os itens, o total e os cronômetros ficam aqui e aparecem em todos os seus aparelhos.</p><button class="btn gold big" onclick="app.iniciar()">🛒 Iniciar compra</button><button class="btn ghost" onclick="app.cadastrarEstaTela()">📦 Cadastrar produtos (sem compra)</button><button class="btn ghost" onclick="app.notaAvulsa()">🧾 Cadastrar nota avulsa (pelo QR Code)</button></div>'+blocoLista(false);
  const tot=somaItens(s.itens),lim=s.limite||0,pct=lim?Math.min(100,tot/lim*100):0,over=lim&&tot>lim;
  const unid=s.itens.length,qtdTot=s.itens.reduce((a,i)=>a+(modoDe(i)!=='peso'&&['un','pct','cx'].includes(i.unidade)?i.qtd:1),0);
  const tms=TIMERS.map(d=>{const t=s.timers[d.k],on=!!t.ini;return '<div class="tm '+(on?'on':'')+'"><div class="tn">'+d.nome+'</div><div class="tt" data-t="'+d.k+'">'+fmtDur(tTotal(t))+'</div><button class="btn '+(on?'danger':'gold')+' sm" onclick="app.timer(\''+d.k+'\')">'+(on?d.fim:d.ini)+'</button>'+(t.seg.length?'<div class="hint">'+t.seg.length+' trecho(s)</div>':'')+'<button class="lk" onclick="app.ajustarTimer(\''+d.k+'\')">✎ ajustar horários</button></div>';}).join('');
@@ -439,7 +445,8 @@ function linhaItem(i,ix,passos){
 
 /* ====== modal de item ====== */
 const baseItem=(cod,p,catPad)=>{const pesoP=p&&modoDe(p)==='peso';return{codigo:cod||'',nome:p?p.nome:'',modo:pesoP?'peso':'emb',unidade:pesoP?unBase(p.unidade):'un',conteudo:!pesoP&&p&&p.conteudo?p.conteudo:null,qtd:pesoP?0:1,preco:p&&p.ultimoPreco?p.ultimoPreco:'',precoNormal:p&&p.precoNormal,cat:(p&&p.cat)||catPad||'',recorrente:!!(p&&p.recorrente)};};
-function itemModal(it,cb,titulo){
+function itemModal(it,cb,titulo,op){
+ op=op||{};const cad=!!op.cad;
  const pr=db.produtos[chaveProd(it)];
  const ult=pr&&pr.historico&&pr.historico.length?pr.historico[pr.historico.length-1]:null;
  const nomes=Object.values(db.produtos).map(p=>p.nome).sort(cmp);
@@ -463,7 +470,7 @@ function itemModal(it,cb,titulo){
  +'<label>Finalidade<select id="i_cat"></select></label>'
  +'<label id="i_recw"><input type="checkbox" id="i_rec">🔁 Compra recorrente (repor automaticamente na lista)</label>'
  +'<div class="hint" id="i_rech">'+(iv>0?'Costuma repetir a cada ~'+iv+' dia(s).':'')+'</div>'
- +'<button class="btn gold big" id="i_ok">Salvar item</button>');
+ +'<button class="btn gold big" id="i_ok">'+(cad?'Salvar produto':'Salvar item')+'</button>');
  const g=id=>m.el.querySelector('#'+id);
  const num=id=>parseNum(g(id).value);
  const arred=n=>Math.round(n*100)/100;
@@ -476,6 +483,13 @@ function itemModal(it,cb,titulo){
  function recalcPeso(origem){const pv=pesoBase();
   if(origem==='pt'){const pt=num('i_pt');if(pv>0&&pt>0){g('i_pk').value=txt(arred(pt/pv));fixo=true;}}
   else{fixo=false;const pk=num('i_pk');if(pv>0&&pk>0)g('i_pt').value=txt(arred(pv*pk));}}
+ if(cad){
+  const lq=g('i_qtd').closest('label');lq.style.display='none';
+  const lp=g('i_preco').closest('label');lp.firstChild.nodeValue='Preço de referência (R$) — opcional';
+  const pc=[...g('i_pes').children];pc.slice(1).forEach(x=>x.style.display='none');
+  g('i_pk').closest('label').firstChild.nodeValue='Preço do kg / litro (R$) — opcional';
+  g('i_promo').closest('label').style.display='none';g('i_pnw').style.display='none';
+ }
  g('i_cod').value=it.codigo||'';g('i_nome').value=it.nome||'';
  g('i_cu').innerHTML=UN_CONT.map(u=>'<option>'+u+'</option>').join('');g('i_cu').value='g';
  if(it.conteudo&&it.conteudo.v>0){g('i_cv').value=txt(it.conteudo.v);g('i_cu').value=it.conteudo.u;}
@@ -491,7 +505,7 @@ function itemModal(it,cb,titulo){
  g('i_m1').onclick=()=>setModo('emb');g('i_m2').onclick=()=>setModo('peso');
  g('i_cu').onchange=()=>{listaConteudo();ppb();};g('i_cv').oninput=ppb;g('i_preco').oninput=ppb;
  g('i_base').onchange=()=>{unidadesPeso();recalcPeso('pv');};g('i_pu').onchange=()=>recalcPeso('pv');g('i_pv').oninput=()=>recalcPeso('pv');g('i_pk').oninput=()=>recalcPeso('pv');g('i_pt').oninput=()=>recalcPeso('pt');
- const visPn=()=>{g('i_pnw').style.display=g('i_promo').checked?'block':'none';};visPn();g('i_promo').onchange=visPn;
+ const visPn=()=>{g('i_pnw').style.display=(!cad&&g('i_promo').checked)?'block':'none';};visPn();g('i_promo').onchange=visPn;
  const visRec=()=>{const c=catObj(g('i_cat').value);const ok=(c&&c.recorrente)||g('i_rec').checked;g('i_recw').style.display=ok?'block':'none';g('i_rech').style.display=ok?'block':'none';};visRec();g('i_rec').onchange=visRec;ligarCat(g('i_cat'),visRec);
  const auto=p=>{if(!p)return;if(!g('i_nome').value)g('i_nome').value=p.nome;
   if(modoDe(p)==='peso'){setModo('peso');g('i_base').value=unBase(p.unidade)==='L'?'L':'kg';unidadesPeso();if(!g('i_pk').value&&p.ultimoPreco)g('i_pk').value=txt(p.ultimoPreco);}
@@ -522,19 +536,30 @@ function itemModal(it,cb,titulo){
   if(!nome){toast('Informe o nome do produto');return;}
   let out;
   if(modo==='emb'){const qtd=num('i_qtd'),preco=num('i_preco'),cv=num('i_cv');
-   if(!(qtd>0)){toast('Informe a quantidade de embalagens');return;}
-   if(isNaN(preco)||preco<0){toast('Informe o preço da embalagem');return;}
-   out={modo:'emb',unidade:'un',qtd,preco,conteudo:cv>0?{v:cv,u:g('i_cu').value}:null};}
+   if(!cad&&!(qtd>0)){toast('Informe a quantidade de embalagens');return;}
+   if(!cad&&(isNaN(preco)||preco<0)){toast('Informe o preço da embalagem');return;}
+   out={modo:'emb',unidade:'un',qtd:cad?1:qtd,preco:isNaN(preco)?0:preco,conteudo:cv>0?{v:cv,u:g('i_cu').value}:null};}
   else{const pv=pesoBase(),pk=num('i_pk'),pt=num('i_pt');
-   if(!(pv>0)){toast('Informe o peso ou volume comprado');return;}
-   if(isNaN(pk)||pk<0){toast('Informe o preço do quilo ou litro');return;}
-   out={modo:'peso',unidade:g('i_base').value,qtd:Math.round(pv*1000)/1000,preco:pk,conteudo:null};
-   if(fixo&&pt>0)out.totalItem=arred(pt);}
-  Object.assign(out,{codigo:g('i_cod').value.trim(),nome,promo,precoNormal:promo&&pn>0?pn:null,cat:g('i_cat').value,recorrente:g('i_rec').checked});
+   if(!cad&&!(pv>0)){toast('Informe o peso ou volume comprado');return;}
+   if(!cad&&(isNaN(pk)||pk<0)){toast('Informe o preço do quilo ou litro');return;}
+   out={modo:'peso',unidade:g('i_base').value,qtd:cad?1:Math.round(pv*1000)/1000,preco:isNaN(pk)?0:pk,conteudo:null};
+   if(!cad&&fixo&&pt>0)out.totalItem=arred(pt);}
+  Object.assign(out,{codigo:g('i_cod').value.trim(),nome,promo:cad?false:promo,precoNormal:!cad&&promo&&pn>0?pn:null,cat:g('i_cat').value,recorrente:g('i_rec').checked});
   infoPend[chaveProd(out)]={foto,fotoUrl:permiteWeb()?fotoUrl:'',marca};
   m.fechar();cb(out);};
  setTimeout(()=>{(!g('i_nome').value?g('i_nome'):modo==='peso'?g('i_pv'):g('i_preco')).focus();},150);
 }
+/* cadastro de produto sem compra: só grava no banco de produtos (nada vai para o carrinho) */
+function cadastrarProduto(cod){
+ itemModal(baseItem(cod,db.produtos[cod]||null,''),n=>{
+  lembrarProduto(n);const k=chaveProd(n),p=db.produtos[k];
+  if(n.preco>0){p.ultimoPreco=n.preco;p.precoNormal=n.preco;}
+  gravarProduto(k);render();toast('Produto cadastrado ✔');},'Cadastrar produto',{cad:true});}
+function perguntaCodigo(cod,aoCompra){
+ const ex=db.produtos[cod];
+ const m=abrirModal('Código lido','<p class="hint">'+esc(cod)+(ex?' — já cadastrado: <b>'+esc(ex.nome)+'</b>':' — ainda não cadastrado')+'</p><p><b>O que você quer fazer?</b></p><button class="btn gold big" id="q_c">🛒 Colocar na compra</button><button class="btn ghost big" id="q_p">📦 Só cadastrar produto</button>');
+ m.el.querySelector('#q_c').onclick=()=>{m.fechar();aoCompra();};
+ m.el.querySelector('#q_p').onclick=()=>{m.fechar();if(ex)editarProduto(cod);else cadastrarProduto(cod);};}
 function lembrarProduto(it){const k=chaveProd(it);const p=db.produtos[k]||{codigo:it.codigo||'',historico:[]};const modo=modoDe(it);p.nome=it.nome;p.modo=modo;p.unidade=modo==='peso'?unBase(it.unidade):'un';p.conteudo=modo==='emb'&&it.conteudo?it.conteudo:null;if(it.precoNormal&&!p.precoNormal)p.precoNormal=it.precoNormal;if(it.cat)p.cat=it.cat;if(it.recorrente!==undefined)p.recorrente=!!it.recorrente;const inf=infoPend[k];if(inf){if(inf.foto)p.foto=inf.foto;if(inf.fotoUrl)p.fotoUrl=inf.fotoUrl;if(inf.marca)p.marca=inf.marca;delete infoPend[k];}db.produtos[k]=p;gravarProduto(k);}
 function registrarPrecos(c){
  c.itens.forEach(it=>{lembrarProduto(it);const k=chaveProd(it),p=db.produtos[k],pb=precoBase(it);p.ultimoPreco=it.preco;p.ultimaQtd=it.qtd;if(!it.promo)p.precoNormal=it.preco;p.puladoAte=null;
@@ -724,7 +749,7 @@ function verCompra(id){
 }
 
 /* ====== aba Produtos ====== */
-function viewProd(){return '<input placeholder="🔍 Buscar produto ou código" value="'+esc(q.prod)+'" oninput="app.filtrar(\'prod\',this.value)"><button class="btn ghost" onclick="app.novoProduto()">📷 Escanear para cadastrar produto</button><div id="lista" style="margin-top:8px">'+listaProd()+'</div>';}
+function viewProd(){return '<input placeholder="🔍 Buscar produto ou código" value="'+esc(q.prod)+'" oninput="app.filtrar(\'prod\',this.value)"><div class="row"><button class="btn ghost" onclick="app.novoProduto()">📷 Escanear</button><button class="btn ghost" onclick="app.novoProdutoManual()">✍️ Digitar sem código</button></div><div id="lista" style="margin-top:8px">'+listaProd()+'</div>';}
 function listaProd(){
  const t=norm(q.prod);let arr=Object.entries(db.produtos).map(([k,p])=>Object.assign({},p,{k}));
  if(t)arr=arr.filter(p=>norm(p.nome+' '+p.codigo).includes(t));
@@ -860,7 +885,7 @@ const app={
  async cancelarSessao(){if(await confirmar('Tem certeza que quer cancelar esta compra? Os itens lançados serão perdidos.','Cancelar compra')){db.sessao=null;gravarSessao();render();}},
  ajustarTimer(k){ajustarTimer(k);},
  timer(k){const t=db.sessao.timers[k];if(t.ini){t.seg.push({a:t.ini,b:Date.now()});t.ini=null;}else t.ini=Date.now();vibra(30);gravarSessao();render();},
- escanearProduto(){scanner('Escanear produto',cod=>{itemModal(baseItem(cod,db.produtos[cod],db.sessao&&db.sessao.cat),n=>app.addItem(n),'Novo item');});},
+ escanearProduto(){scanner('Escanear produto',cod=>{perguntaCodigo(cod,()=>itemModal(baseItem(cod,db.produtos[cod],db.sessao&&db.sessao.cat),n=>app.addItem(n),'Novo item'));});},
  itemManual(){itemModal(baseItem('',null,db.sessao&&db.sessao.cat),n=>app.addItem(n),'Novo item');},
  async addItem(it){const s=db.sessao;if(!s){toast('A compra foi encerrada em outro aparelho.');return;}const lim=s.limite||0,novo=somaItens(s.itens)+itemTotal(it);
   if(lim&&novo>lim){vibra([120,60,120]);if(!await confirmar('Este item faz a compra passar do limite em '+fmt(novo-lim)+'. Adicionar mesmo assim?','Adicionar'))return;}
@@ -896,8 +921,9 @@ const app={
  async pular(id){const p=Object.values(db.produtos).find(x=>x.id===id);if(!p)return;if(await confirmar('Tirar "'+p.nome+'" da lista por '+db.config.pularDias+' dia(s)?','Tirar da lista')){p.puladoAte=somaDias(hoje(),db.config.pularDias);gravarProduto(p.k);render();toast('Tirado da lista até '+fmtDM(p.puladoAte));}},
  voltarLista(id){const p=Object.values(db.produtos).find(x=>x.id===id);if(!p)return;p.puladoAte=null;gravarProduto(p.k);render();},
  /* produtos */
- novoProduto(){scanner('Cadastrar produto',cod=>{const ex=db.produtos[cod];if(ex){editarProduto(cod);return;}
-  itemModal(baseItem(cod,null,''),n=>{lembrarProduto(n);const k=chaveProd(n),p=db.produtos[k];p.ultimoPreco=n.preco;if(!n.promo)p.precoNormal=n.preco;gravarProduto(k);render();toast('Produto cadastrado');},'Novo produto');});},
+ novoProduto(){scanner('Cadastrar produto',cod=>{const ex=db.produtos[cod];if(ex){editarProduto(cod);return;}cadastrarProduto(cod);});},
+ novoProdutoManual(){cadastrarProduto('');},
+ cadastrarEstaTela(){scanner('Cadastrar produto',cod=>{const ex=db.produtos[cod];if(ex){editarProduto(cod);return;}cadastrarProduto(cod);});},
  editarProduto(k){editarProduto(decodeURIComponent(k));},
  /* ajustes */
  editarCat(id){editarCategoria(id);},

@@ -84,13 +84,18 @@ textarea{resize:vertical}
 <div id="toast"></div>
 <script type="module">
 'use strict';
-const VERSAO='2.7';
+const VERSAO='2.8';
 const NOME_APP='fenix-compras';
 const BASE_FENIX='https://fenicris-dev.github.io/Fenix-Core/';
 const CORE_URL=BASE_FENIX+'fenix-core.js';
 const FIREBASE_V='10.12.2',GS='https://www.gstatic.com/firebasejs/'+FIREBASE_V+'/';
 const CHAVE_V1='fenixControleCompras';
 const CHANGELOG=[
+{v:'2.8',d:'21/10/2026',i:[
+ 'Produtos incompletos: a aba Produtos mostra quantos estão sem foto, sem preço ou sem código, marca cada um com ⚠️ e ganhou filtros para completar o cadastro.',
+ 'Números com período: Tudo, Este mês, Este ano ou Últimos 30 dias. O resumo traz total gasto em notas, quantidade de notas, itens lançados, produtos diferentes e ticket médio.',
+ 'Mais comprados: ranking dos produtos que você mais repete, com quantas vezes comprou, quantidade total, valor unitário (último, médio e menor), custo total e se o preço subiu ou caiu desde a compra anterior. Ordene por frequência, custo total ou A–Z.'
+]},
 {v:'2.7',d:'20/10/2026',i:[
  'Cadastro de produtos sem entrar numa compra: leia o código de barras/QR (ou digite) e informe nome, foto, embalagem e preço de referência. O produto só fica guardado no banco, sem ir para o carrinho.',
  'Ao ler um código durante a compra, o app pergunta: "🛒 Colocar na compra" ou "📦 Só cadastrar produto".',
@@ -390,7 +395,7 @@ function pendentes(){const s=db.sessao,out=[];
  return out.sort((a,b)=>cmp(a.nome,b.nome));}
 
 /* ====== estado de tela ====== */
-let aba='compra';const q={notas:'',prod:'',cat:''};
+let aba='compra';const q={notas:'',prod:'',cat:'',pf:'',per:'tudo',ord:'freq'};
 const ABAS=[['compra','🛒','Compra'],['lista','📝','Lista'],['notas','🧾','Notas'],['prod','📦','Produtos'],['stats','📊','Números'],['ajustes','⚙️','Ajustes']];
 const todosCarregados=()=>nomesCol.every(n=>carregado[n]);
 function render(){
@@ -749,13 +754,19 @@ function verCompra(id){
 }
 
 /* ====== aba Produtos ====== */
-function viewProd(){return '<input placeholder="🔍 Buscar produto ou código" value="'+esc(q.prod)+'" oninput="app.filtrar(\'prod\',this.value)"><div class="row"><button class="btn ghost" onclick="app.novoProduto()">📷 Escanear</button><button class="btn ghost" onclick="app.novoProdutoManual()">✍️ Digitar sem código</button></div><div id="lista" style="margin-top:8px">'+listaProd()+'</div>';}
+const faltas=p=>{const f=[];if(!fotoDe(p))f.push('foto');if(!(p.ultimoPreco>0))f.push('preço');if(!p.codigo)f.push('código');return f;};
+function barraProd(){
+ const arr=Object.values(db.produtos);const n={foto:0,'preço':0,'código':0};arr.forEach(p=>faltas(p).forEach(f=>n[f]++));
+ const chip=(v,t,c)=>'<button class="btn sm inl '+(q.pf===v?'gold':'ghost')+'" style="margin:2px 4px 2px 0" onclick="app.filtroProd(\''+v+'\')">'+t+(c!=null?' ('+c+')':'')+'</button>';
+ return '<div style="margin:6px 0">'+chip('','Todos',arr.length)+chip('foto','⚠️ Sem foto',n.foto)+chip('preço','⚠️ Sem preço',n['preço'])+chip('código','⚠️ Sem código',n['código'])+'</div>';}
+function viewProd(){return barraProd()+'<input placeholder="🔍 Buscar produto ou código" value="'+esc(q.prod)+'" oninput="app.filtrar(\'prod\',this.value)"><div class="row"><button class="btn ghost" onclick="app.novoProduto()">📷 Escanear</button><button class="btn ghost" onclick="app.novoProdutoManual()">✍️ Digitar sem código</button></div><div id="lista" style="margin-top:8px">'+listaProd()+'</div>';}
 function listaProd(){
  const t=norm(q.prod);let arr=Object.entries(db.produtos).map(([k,p])=>Object.assign({},p,{k}));
  if(t)arr=arr.filter(p=>norm(p.nome+' '+p.codigo).includes(t));
+ if(q.pf)arr=arr.filter(p=>faltas(p).includes(q.pf));
  arr.sort((a,b)=>cmp(a.nome,b.nome));
  if(!arr.length)return '<div class="empty">'+(t?'Nada encontrado.':'O banco de produtos é preenchido conforme você escaneia e finaliza compras.')+'</div>';
- return '<div class="card">'+arr.map(p=>{const iv=p.recorrente?intervalo(p):0;return '<div class="it" onclick="app.editarProduto(\''+enc(p.k)+'\')" style="cursor:pointer">'+thImg(fotoDe(p))+'<div class="nm"><b>'+esc(p.nome)+(p.recorrente?'<span class="badge b2">🔁'+(iv>0?' ~'+iv+'d':'')+'</span>':'')+'</b><small>'+(p.codigo?esc(p.codigo)+' · ':'')+esc(descProd(p))+(p.precoNormal?' · normal '+fmt(p.precoNormal):'')+(p.cat?' · '+esc(catNome(p.cat)):'')+'</small></div><div class="vl">'+(p.ultimoPreco?fmt(p.ultimoPreco)+(pbTxt(p)?'<br><small style="font-weight:400;color:var(--mut)">'+pbTxt(p)+'</small>':''):'—')+'</div></div>';}).join('')+'</div>';
+ return '<div class="card">'+arr.map(p=>{const iv=p.recorrente?intervalo(p):0;return '<div class="it" onclick="app.editarProduto(\''+enc(p.k)+'\')" style="cursor:pointer">'+thImg(fotoDe(p))+'<div class="nm"><b>'+esc(p.nome)+(p.recorrente?'<span class="badge b2">🔁'+(iv>0?' ~'+iv+'d':'')+'</span>':'')+(faltas(p).length?'<span class="badge" style="background:#fff3cd;color:#7a5a00">⚠️ sem '+faltas(p).join(', ')+'</span>':'')+'</b><small>'+(p.codigo?esc(p.codigo)+' · ':'')+esc(descProd(p))+(p.precoNormal?' · normal '+fmt(p.precoNormal):'')+(p.cat?' · '+esc(catNome(p.cat)):'')+'</small></div><div class="vl">'+(p.ultimoPreco?fmt(p.ultimoPreco)+(pbTxt(p)?'<br><small style="font-weight:400;color:var(--mut)">'+pbTxt(p)+'</small>':''):'—')+'</div></div>';}).join('')+'</div>';
 }
 function editarProduto(k){
  const p=db.produtos[k];if(!p)return;
@@ -791,8 +802,24 @@ function editarProduto(k){
  g('p_ex').onclick=async()=>{if(await confirmar('Tem certeza que quer excluir o produto "'+p.nome+'"?','Excluir')){const id=p.id||pid(k);delete db.produtos[k];apagarDoc('produtos',id);m.fechar();render();}};
 }
 /* ====== aba Números (estatísticas) ====== */
+const perOk=c=>{const d=c.data||'',h=hoje();if(q.per==='mes')return d.slice(0,7)===h.slice(0,7);if(q.per==='ano')return d.slice(0,4)===h.slice(0,4);if(q.per==='30'){const lim=new Date(h+'T12:00:00');lim.setDate(lim.getDate()-30);return new Date(d+'T12:00:00')>=lim;}return true;};
+function seletorPer(){return '<div class="card"><label>Período<select onchange="app.filtroPer(this.value)">'+[['tudo','Tudo até agora'],['mes','Este mês'],['ano','Este ano'],['30','Últimos 30 dias']].map(o=>'<option value="'+o[0]+'"'+(q.per===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label></div>';}
+function maisComprados(cs){
+ const g={};
+ cs.forEach(c=>c.itens.forEach(i=>{const k=chaveProd(i);const o=g[k]=g[k]||{k,nome:i.nome,modo:modoDe(i),un:modoDe(i)==='peso'?unBase(i.unidade):'un',compras:{},qtd:0,custo:0,precos:[]};o.compras[c.id||c.data+c.hora]=1;o.qtd+=i.qtd;o.custo+=itemTotal(i);o.precos.push({d:(c.data||'')+(c.hora||''),p:i.preco});}));
+ let arr=Object.values(g).map(o=>{o.n=Object.keys(o.compras).length;o.precos.sort((a,b)=>a.d<b.d?-1:1);const ps=o.precos.map(x=>x.p);o.ult=ps[ps.length-1];o.ant=ps.length>1?ps[ps.length-2]:null;o.med=ps.reduce((a,b)=>a+b,0)/ps.length;o.min=Math.min.apply(null,ps);return o;});
+ const freq=arr.filter(o=>o.n>=2);const usaTodos=!freq.length;if(!usaTodos)arr=freq;
+ arr.sort(q.ord==='custo'?(a,b)=>b.custo-a.custo:q.ord==='az'?(a,b)=>cmp(a.nome,b.nome):(a,b)=>b.n-a.n||b.custo-a.custo);
+ arr=arr.slice(0,40);
+ const ord='<label>Ordenar por<select onchange="app.filtroOrd(this.value)">'+[['freq','Frequência'],['custo','Custo total'],['az','A–Z']].map(o=>'<option value="'+o[0]+'"'+(q.ord===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>';
+ if(!arr.length)return '<div class="card"><h2>Mais comprados</h2><p class="hint">Aparecem aqui os produtos lançados nas compras e notas deste período.</p></div>';
+ return '<div class="card"><h2>Mais comprados</h2>'+(usaTodos?'<p class="hint">Ainda não há produto comprado 2 vezes ou mais no período; mostrando todos.</p>':'<p class="hint">Produtos comprados 2 vezes ou mais no período.</p>')+ord+arr.map(o=>{
+  const u=o.modo==='peso'?'/'+o.un:'/un';const tend=o.ant==null?'':o.ult>o.ant?' <span style="color:var(--red)">▲ subiu '+fmt(o.ult-o.ant)+'</span>':o.ult<o.ant?' <span style="color:var(--green)">▼ caiu '+fmt(o.ant-o.ult)+'</span>':' <span class="hint">= igual</span>';
+  const pr=db.produtos[o.k];
+  return '<div class="it">'+thImg(fotoDe(pr))+'<div class="nm"><b>'+esc(o.nome)+'</b><small>'+o.n+' compra(s) · '+fq(o.qtd)+(o.modo==='peso'?' '+o.un:' un')+'<br>último '+fmt(o.ult)+u+tend+'<br>médio '+fmt(o.med)+u+' · menor '+fmt(o.min)+u+'</small></div><div class="vl">'+fmt(o.custo)+'<br><small style="font-weight:400;color:var(--mut)">custo total</small></div></div>';}).join('')+'</div>';}
 function viewStats(){
- const cs=db.compras;if(!cs.length)return '<div class="empty">As estatísticas aparecem depois da primeira compra salva.</div>';
+ const todas=db.compras;if(!todas.length)return '<div class="empty">As estatísticas aparecem depois da primeira compra salva.</div>';
+ const cs=todas.filter(perOk);if(!cs.length)return seletorPer()+'<div class="empty">Nenhuma compra neste período.</div>';
  const dias=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];const pd=[0,0,0,0,0,0,0];
  const hs={};const med={casa:[],loja:[],caixa:[],fila:[]};const est={};const fin={};
  cs.forEach(c=>{const d=new Date(c.data+'T12:00:00').getDay();pd[d]++;
@@ -808,7 +835,8 @@ function viewStats(){
  const hmx=Math.max.apply(null,Object.values(hs).map(x=>x.n))||1;
  const fmx=Math.max.apply(null,Object.values(fin))||1;
  const total=cs.reduce((s,c)=>s+totalCompra(c),0);
- return '<div class="card"><h2>Resumo</h2><div class="kv"><span>Compras registradas</span><span>'+cs.length+'</span></div><div class="kv"><span>Total gasto</span><span><b>'+fmt(total)+'</b></span></div><div class="kv"><span>Ticket médio</span><span>'+fmt(total/cs.length)+'</span></div></div>'
+ const nItens=cs.reduce((a,c)=>a+c.itens.length,0),nProd=new Set(cs.flatMap(c=>c.itens.map(chaveProd))).size;
+ return seletorPer()+'<div class="card"><h2>Resumo</h2><div class="kv"><span>Total gasto em notas</span><span><b>'+fmt(total)+'</b></span></div><div class="kv"><span>Notas registradas</span><span>'+cs.length+'</span></div><div class="kv"><span>Itens lançados</span><span>'+nItens+'</span></div><div class="kv"><span>Produtos diferentes</span><span>'+nProd+'</span></div><div class="kv"><span>Ticket médio</span><span>'+fmt(total/cs.length)+'</span></div></div>'+maisComprados(cs)
  +'<div class="card"><h2>Gasto por finalidade</h2>'+Object.entries(fin).sort((a,b)=>b[1]-a[1]).map(([n,v])=>'<div class="bar w"><span>'+esc(n)+'</span><i style="width:'+(v/fmx*100)+'%"></i><b>'+fmt(v)+'</b></div>').join('')+'</div>'
  +'<div class="card"><h2>Dia da semana</h2>'+dias.map((n,i)=>'<div class="bar"><span>'+n+'</span><i style="width:'+(pd[i]/mx*100)+'%"></i><b>'+pd[i]+'×</b></div>').join('')+'</div>'
  +'<div class="card"><h2>Horário das compras</h2>'+Object.keys(hs).sort((a,b)=>a-b).map(h=>'<div class="bar"><span>'+p2(h)+'h</span><i style="width:'+(hs[h].n/hmx*100)+'%"></i><b>'+hs[h].n+'×</b></div>').join('')+melhor+'</div>'
@@ -866,6 +894,9 @@ function msgErro(e){return MSG_AUTH[e&&e.code]||('Não deu certo ('+((e&&e.code)
 const app={
  aba(a){aba=a;render();window.scrollTo(0,0);},
  filtrar(k,v){q[k]=v;const l=document.getElementById('lista');if(l)l.innerHTML=k==='notas'?listaNotas():listaProd();},
+ filtroProd(v){q.pf=v;render();},
+ filtroPer(v){q.per=v;render();},
+ filtroOrd(v){q.ord=v;render();},
  filtroCat(v){q.cat=v;const l=document.getElementById('lista');if(l)l.innerHTML=listaNotas();},
  /* conta */
  async entrar(){const em=document.getElementById('l_em').value.trim(),pw=document.getElementById('l_pw').value,er=document.getElementById('l_err');er.textContent='';try{await authMod.entrar(em,pw);}catch(e){er.textContent=msgErro(e);}},

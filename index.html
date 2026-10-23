@@ -11,6 +11,35 @@
 <link rel="icon" type="image/png" href="https://fenicris-dev.github.io/Fenix-Core/Icon/Fenix_Icone_64.png">
 <link rel="apple-touch-icon" href="https://fenicris-dev.github.io/Fenix-Core/Icon/Fenix_Icone_192.png">
 <title>Fênix | Controle de Compras</title>
+<script>
+/* Carregador oficial do Fênix Core (módulo ES): online + cópia em cache para offline (regra 2 do Livro) */
+window.fenixCoreReady = (function () {
+  var URL_CORE = 'https://fenicris-dev.github.io/Fenix-Core/fenix-core.js';
+  var CACHE = 'fenix-core-cache';
+  function fromCache() {
+    if (!window.caches) return Promise.reject(new Error('Cache indisponível'));
+    return caches.open(CACHE)
+      .then(function (c) { return c.match(URL_CORE); })
+      .then(function (r) {
+        if (!r) throw new Error('Fênix Core indisponível: sem internet e sem cópia no cache');
+        return r.text();
+      });
+  }
+  return fetch(URL_CORE, { cache: 'no-cache' })
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var copy = r.clone();
+      if (window.caches) caches.open(CACHE).then(function (c) { return c.put(URL_CORE, copy); }).catch(function () {});
+      return r.text();
+    })
+    .catch(fromCache)
+    .then(function (code) {
+      var url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+      return import(url).then(function (mod) { window.FenixCore = mod.FenixCore; return mod.FenixCore; });
+    });
+})();
+window.fenixCoreReady.catch(function () {});
+</script>
 <style>
 :root{--navy:#041273;--navy2:#0a1f9e;--gold:#d4a62a;--gold2:#f0c850;--bg:#f3f4fa;--card:#fff;--tx:#1b1d2b;--mut:#6b6f85;--red:#c62828;--green:#1b8a4b;--line:#e1e3ee}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -84,13 +113,20 @@ textarea{resize:vertical}
 <div id="toast"></div>
 <script type="module">
 'use strict';
-const VERSAO='2.8';
+const VERSAO='2.9';
+const FENIX_BANCO_ATIVO = true; /* regra 1: este app já usa o banco (login e sincronia entre aparelhos) */
 const NOME_APP='fenix-compras';
 const BASE_FENIX='https://fenicris-dev.github.io/Fenix-Core/';
 const CORE_URL=BASE_FENIX+'fenix-core.js';
 const FIREBASE_V='10.12.2',GS='https://www.gstatic.com/firebasejs/'+FIREBASE_V+'/';
 const CHAVE_V1='fenixControleCompras';
 const CHANGELOG=[
+{v:'2.9',d:'23/10/2026',i:[
+ 'Etapa 1 de 5 para o Livro das Regras Fênix v4.5 (roteiro da regra 55). Ficha do app: A, B, C, E, F, G, H, I e J (as etapas 2 a 5 aplicam cada grupo).',
+ 'Usa só o fenix-core oficial (v4.5): a sincronia entre aparelhos deixou de vir embutida no app e passa a ser a do core, com o mesmo caminho de dados (dados_pessoais/{uid}/fenix-compras_…), então nada muda nos seus dados.',
+ 'Carregador oficial do core no cabeçalho da página, com cópia no aparelho para abrir sem internet e limite de 10 segundos.',
+ 'Se o core publicado for anterior à v4.5, o app abre em modo offline e explica o motivo, em vez de falhar.'
+]},
 {v:'2.8',d:'21/10/2026',i:[
  'Produtos incompletos: a aba Produtos mostra quantos estão sem foto, sem preço ou sem código, marca cada um com ⚠️ e ganhou filtros para completar o cadastro.',
  'Números com período: Tudo, Este mês, Este ano ou Últimos 30 dias. O resumo traz total gasto em notas, quantidade de notas, itens lançados, produtos diferentes e ticket médio.',
@@ -994,16 +1030,13 @@ function saiu(){cancelar.forEach(f=>{try{f();}catch(e){}});cancelar=[];usuario=n
 const msgCore=e=>{const m=String((e&&e.message)||e||'erro');return /tempo/i.test(m)?'o fenix-core demorou demais':(navigator.onLine===false?'sem internet':'não foi possível carregar o fenix-core: '+m.slice(0,60));};
 let coreFonte='',diagLinhas=null,reconectando=false;
 async function carregarCore(){
- /* carregador oficial (Livro das Regras): rede primeiro; se falhar, a cópia guardada no aparelho (Cache API) */
+ /* carregador oficial (regra 2): rede primeiro; sem rede, a cópia guardada no aparelho; limite de 10 s */
  let ultimo=null;
- try{const mod=await Promise.race([import(CORE_URL),new Promise((_,rej)=>setTimeout(()=>rej(new Error('tempo esgotado')),10000))]);
-  FC=mod.FenixCore;if(!FC)throw new Error('o arquivo não exporta FenixCore');coreFonte='oficial';
-  try{const c=await caches.open('fenix-core-copia');const r=await fetch(CORE_URL);if(r.ok)await c.put(CORE_URL,r);}catch(e){}
-  return;}
+ try{
+  FC=await Promise.race([window.fenixCoreReady,new Promise((_,rej)=>setTimeout(()=>rej(new Error('tempo esgotado')),10000))]);
+  if(!FC)throw new Error('o arquivo não exporta FenixCore');
+  coreFonte='oficial';return;}
  catch(e){ultimo=e;console.warn('core falhou:',e);}
- try{const c=await caches.open('fenix-core-copia');const r=await c.match(CORE_URL);
-  if(r){const txt=await r.text();const url=URL.createObjectURL(new Blob([txt],{type:'text/javascript'}));const mod=await import(url);FC=mod.FenixCore;if(FC){coreFonte='cópia guardada no aparelho';return;}}}
- catch(e){console.warn('cópia do core falhou:',e);}
  throw ultimo||new Error('falha ao carregar o core');}
 async function diagnosticar(){
  const L=[];
@@ -1013,31 +1046,20 @@ async function diagnosticar(){
  L.push('Navegador: '+(navigator.onLine?'online':'offline')+' · origem da página: '+location.origin);
  L.push('Endereço testado: '+CORE_URL);
  return L;}
-/* sincronia pessoal embutida: o core v3.4 não traz criarModuloSincronia; mesma estrutura de dados do core v2.3 */
+/* sincronia pessoal: vem do core v4.5 (FenixCore.criarModuloSincronia), mesma estrutura dados_pessoais/{uid}/fenix-compras_{coleção}; sem cópia dentro do app (regra 1) */
 async function criarSincronia(db,uid,nomeApp){
- if(FC.criarModuloSincronia)return FC.criarModuloSincronia(db,uid,nomeApp);
- const F=await import(GS+'firebase-firestore.js');
- const {collection,doc,setDoc,deleteDoc,onSnapshot,writeBatch,serverTimestamp,getDocFromServer}=F;
- const CH='fenix_relogio__'+nomeApp;let off=0;try{const v=Number(localStorage.getItem(CH));if(isFinite(v))off=v;}catch(e){}
- const nc=n=>nomeApp+'_'+n,col=n=>collection(db,'dados_pessoais',uid,nc(n)),ref=(n,id)=>doc(db,'dados_pessoais',uid,nc(n),String(id));
- const agora=()=>Date.now()+off,limpar=o=>JSON.parse(JSON.stringify(o)),marca=o=>({...limpar(o),_u:agora()});
- return{agora,relogio:()=>off,
-  ouvir(n,aoMudar,aoErro){return onSnapshot(col(n),snap=>{const ms=snap.docChanges().map(c=>{const d=c.doc.data();const at=d._u||0;delete d._u;return{tipo:c.type,id:c.doc.id,dados:d,atualizadoEm:at,pendente:c.doc.metadata.hasPendingWrites};});aoMudar(ms,{doCache:snap.metadata.fromCache,pendente:snap.metadata.hasPendingWrites});},err=>{if(aoErro)aoErro(err);else console.error(err);});},
-  salvar(n,o){if(!o||o.id==null)return Promise.reject(new Error(n+': registro sem id.'));return setDoc(ref(n,o.id),marca(o));},
-  async salvarVarios(n,l){for(let i=0;i<l.length;i+=400){const lote=writeBatch(db);l.slice(i,i+400).forEach(o=>{if(!o||o.id==null)throw new Error(n+': registro sem id.');lote.set(ref(n,o.id),marca(o));});await lote.commit();}return true;},
-  excluir(n,id){if(id==null)return Promise.reject(new Error(n+': faltou o id.'));return deleteDoc(ref(n,id));},
-  async medirRelogio(){const r=doc(db,'dados_pessoais',uid,nc('sistema'),'relogio');
-   const medir=(async()=>{const t0=Date.now();await setDoc(r,{t:serverTimestamp()});const t1=Date.now();const sn=await getDocFromServer(r);const t=sn.data()&&sn.data().t;if(!t||!t.toMillis)return off;return Math.round(t.toMillis()-(t0+t1)/2);})();
-   const novo=await Promise.race([medir,new Promise(res=>setTimeout(()=>res(null),8000))]).catch(()=>null);
-   if(novo!=null&&isFinite(novo)){off=novo;try{localStorage.setItem(CH,String(off));}catch(e){}}return off;}};
+ if(!FC||typeof FC.criarModuloSincronia!=='function')throw new Error('o fenix-core publicado é anterior à v4.5 (não tem criarModuloSincronia)');
+ return FC.criarModuloSincronia(db,uid,nomeApp);
 }
 async function recuperarSenhaFB(email){
- if(authMod&&authMod.recuperarSenha)return authMod.recuperarSenha(email);
- const A=await import(GS+'firebase-auth.js');return A.sendPasswordResetEmail(A.getAuth(appFire),email);}
+ if(!authMod)throw new Error('sem conexão com o login');
+ return (authMod.recuperarSenha||authMod.redefinirSenha)(email);}
 let appFire=null;
 function iniciarNuvem(){
- if(!FC.initFirebase||!FC.criarModuloAuth)throw new Error('o fenix-core publicado não tem initFirebase/criarModuloAuth');
- const r=FC.initFirebaseComCache?FC.initFirebaseComCache():FC.initFirebase();FC.init(NOME_APP);dbFire=r.db;appFire=r.app;authMod=FC.criarModuloAuth(r.app);
+ if(!FENIX_BANCO_ATIVO)throw new Error('o banco de dados está desligado neste app');
+ const falta=['initFirebaseComCache','criarModuloAuth','criarModuloSincronia'].filter(k=>!FC||typeof FC[k]!=='function');
+ if(falta.length)throw new Error('o fenix-core publicado é anterior à v4.5 (falta '+falta.join(', ')+')');
+ const r=FC.initFirebaseComCache();FC.init(NOME_APP);dbFire=r.db;appFire=r.app;authMod=FC.criarModuloAuth(r.app);
  try{FC.sobre.registrarAcesso(NOME_APP,'v'+VERSAO);}catch(e){}
  authMod.aoMudarEstado(u=>{if(u)entrou(u);else saiu();});}
 function iniciarLocal(motivo){

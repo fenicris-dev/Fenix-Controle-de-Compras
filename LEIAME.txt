@@ -1,0 +1,15 @@
+Fênix | Controle de Compras v2.9 (etapa 1 de 5 do roteiro da regra 55, Livro das Regras v4.5)
+
+Arquivos (substituem os do repositório Fenix-Controle-de-Compras):
+- index.html ........................ o app publicado (mesmo conteúdo da cópia com versão)
+- Fenix_Controle_Compras_v2.9.html .. cópia com a versão no nome (histórico)
+- sw.js ............................. service worker com o cache da v2.9
+
+O que mudou (só a etapa 1: core, sem mexer em visual nem em dados):
+- Usa o core oficial v4.5: a sincronia entre aparelhos sai de dentro do app e vem do core (FenixCore.criarModuloSincronia). Mesmo caminho de dados: dados_pessoais/{uid}/fenix-compras_{coleção}.
+- Carregador oficial do core no <head>, com cópia no aparelho e limite de 10 s.
+- Chave FENIX_BANCO_ATIVO = true.
+- Selo (fenix-livro) e ficha continuam como estavam: só mudam na última etapa (regra 53).
+
+Ordem para publicar: 1) publique antes o core v4.5 na biblioteca (fenix-biblioteca-v4.5.zip); 2) depois estes arquivos; 3) abra o app, entre e confira que as compras aparecem. Se o core ainda for o antigo, o app abre em modo offline e avisa o motivo.
+Base usada: repositório Fenix-Controle-de-Compras, commit fa1bc2d (v2.8, 21/10/2026). Se a equipe já mexeu no arquivo depois disso, me avise antes de publicar para eu refazer a partir da versão mais nova.

@@ -1,0 +1,12 @@
+Fênix | Controle de Compras — v3.3 (Livro das Regras Fênix v4.4) — novidades: tema escuro opcional e produtos comprados para kit entram no Estoque
+
+publicar/  -> vai para a raiz do repositório do app (GitHub Pages):
+   index.html e fenix-controle-de-compras.html (cópias idênticas do app), sw.js, manifest.json,
+   icon-192.png, icon-512.png e icon-512-maskable.png (ícone oficial)
+manual/    -> Manual do usuário em MD e em PDF (também dentro do app, em Ajustes)
+versoes/   -> cópias com a versão no nome, SÓ controle interno. NUNCA suba esta pasta para o repositório.
+
+Publicar: 1) backup no app atual (Ajustes > Dados > Exportar backup); 2) substitua os arquivos de publicar/;
+3) abra o app, entre e confira os dados; 4) Painel da biblioteca > "Testar tudo".
+Tema: Ajustes > Sobre e Changelog > Tema (Automático, Claro ou Escuro).
+Selo: fenix-livro 4.4 · Ficha: A, B, C, E, G, I, J.

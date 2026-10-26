@@ -1,0 +1,12 @@
+Fênix | Controle de Compras — v3.1 (Livro das Regras Fênix v4.4) — com o ícone oficial
+
+publicar/  -> vai para a raiz do repositório do app (GitHub Pages):
+   index.html e fenix-controle-de-compras.html (cópias idênticas do app), sw.js, manifest.json,
+   icon-192.png, icon-512.png e icon-512-maskable.png (ícone oficial)
+manual/    -> Manual do usuário em MD e em PDF (também dentro do app, em Ajustes)
+versoes/   -> cópias com a versão no nome, SÓ controle interno. NUNCA suba esta pasta para o repositório.
+
+Publicar: 1) backup no app atual (Ajustes > Dados > Exportar backup); 2) substitua os arquivos de publicar/;
+3) abra o app, entre e confira os dados; 4) Painel da biblioteca > "Testar tudo".
+Para o ícone da tela inicial mudar no celular, remova o app instalado e instale de novo.
+Selo: fenix-livro 4.4 · Ficha: A, B, C, E, G, I.

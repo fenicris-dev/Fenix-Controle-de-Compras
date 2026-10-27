@@ -1,4 +1,4 @@
-Fênix | Controle de Compras — v3.3 (Livro das Regras Fênix v4.4) — novidades: tema escuro opcional e produtos comprados para kit entram no Estoque
+Fênix | Controle de Compras — v3.4 (Livro das Regras Fênix v4.4) — novidades: ambientes (casa, sítio, casa de praia, casa dos pais), medicamentos e estoque mínimo
 
 publicar/  -> vai para a raiz do repositório do app (GitHub Pages):
    index.html e fenix-controle-de-compras.html (cópias idênticas do app), sw.js, manifest.json,
@@ -7,6 +7,6 @@ manual/    -> Manual do usuário em MD e em PDF (também dentro do app, em Ajust
 versoes/   -> cópias com a versão no nome, SÓ controle interno. NUNCA suba esta pasta para o repositório.
 
 Publicar: 1) backup no app atual (Ajustes > Dados > Exportar backup); 2) substitua os arquivos de publicar/;
-3) abra o app, entre e confira os dados; 4) Painel da biblioteca > "Testar tudo".
-Tema: Ajustes > Sobre e Changelog > Tema (Automático, Claro ou Escuro).
+3) abra o app, entre e confira os dados (tudo que existia vira o ambiente "Casa"); 4) Painel da biblioteca > "Testar tudo".
+Ambientes: barra no alto das abas Lista, Estoque e Compra > "trocar ambiente".
 Selo: fenix-livro 4.4 · Ficha: A, B, C, E, G, I, J.

@@ -1,0 +1,68 @@
+// =====================================================================================
+// Fênix | Controle de Compras v4.0 — bloco de regras para AMBIENTES COMPARTILHADOS
+// Cole este bloco DENTRO de  match /databases/{database}/documents { ... }  do seu firestore.rules,
+// sem apagar nada do que já existe (dados_pessoais, empresas etc. continuam como estão).
+// Tudo que não está liberado aqui continua negado.
+// =====================================================================================
+match /ambientes_compartilhados/{amb} {
+
+  function logado() { return request.auth != null; }
+  function ambAtual() { return get(/databases/$(database)/documents/ambientes_compartilhados/$(amb)).data; }
+  function souDono() { return ambAtual().dono == request.auth.uid; }
+  function souMembro() { return request.auth.uid in ambAtual().membrosUids; }
+
+  // O gestor (dono) altera o ambiente, mas nunca troca o dono.
+  function gestorEdita() {
+    return resource.data.dono == request.auth.uid && request.resource.data.dono == request.auth.uid;
+  }
+  // Quem tem um convite válido (de uso único, 7 dias) entra com o papel do convite, e só ele mesmo.
+  function aceitaConvite() {
+    let tk = request.resource.data.aceiteToken;
+    let cv = get(/databases/$(database)/documents/ambientes_compartilhados/$(amb)/convites/$(tk)).data;
+    return !(request.auth.uid in resource.data.membrosUids)
+      && request.auth.uid in request.resource.data.membrosUids
+      && request.resource.data.membrosUids.size() == resource.data.membrosUids.size() + 1
+      && cv.ate > request.time.toMillis()
+      && request.resource.data.papeis[request.auth.uid].p == cv.papel
+      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['papeis', 'membrosUids', 'aceiteToken'])
+      && request.resource.data.papeis.diff(resource.data.papeis).affectedKeys().hasOnly([request.auth.uid]);
+  }
+  // Quem não é o dono pode sair do ambiente (tirar só a si mesmo).
+  function saiDoAmbiente() {
+    return request.auth.uid in resource.data.membrosUids
+      && request.auth.uid != resource.data.dono
+      && !(request.auth.uid in request.resource.data.membrosUids)
+      && request.resource.data.membrosUids.size() == resource.data.membrosUids.size() - 1
+      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['papeis', 'membrosUids'])
+      && request.resource.data.papeis.diff(resource.data.papeis).affectedKeys().hasOnly([request.auth.uid]);
+  }
+
+  // Só membros leem o ambiente (a consulta do app filtra por membrosUids array-contains uid).
+  allow get, list: if logado() && request.auth.uid in resource.data.membrosUids;
+  // Quem cria vira o único membro e o gestor.
+  allow create: if logado()
+    && request.resource.data.dono == request.auth.uid
+    && request.resource.data.membrosUids == [request.auth.uid]
+    && request.resource.data.papeis.keys() == [request.auth.uid]
+    && request.resource.data.papeis[request.auth.uid].p == 'gestor';
+  allow update: if logado() && (gestorEdita() || aceitaConvite() || saiDoAmbiente());
+  allow delete: if logado() && resource.data.dono == request.auth.uid;
+
+  // Estoque e lista do ambiente: membros leem; gestor e cuidador gravam; leitor só consulta.
+  match /dados/{reg} {
+    allow read: if logado() && souMembro();
+    allow create, update, delete: if logado() && souMembro()
+      && ambAtual().papeis[request.auth.uid].p in ['gestor', 'cuidador'];
+  }
+
+  // Convites: quem tem o código (id do documento) lê um convite pontual; só o dono lista e cria.
+  match /convites/{tk} {
+    allow get: if logado();
+    allow list: if logado() && souDono();
+    allow create: if logado() && souDono() && request.resource.data.papel in ['cuidador', 'leitor'];
+    // O dono apaga; quem acabou de entrar (no mesmo lote do aceite) apaga o convite usado.
+    allow delete: if logado() && (souDono()
+      || (request.auth.uid in getAfter(/databases/$(database)/documents/ambientes_compartilhados/$(amb)).data.membrosUids
+          && !souMembro()));
+  }
+}

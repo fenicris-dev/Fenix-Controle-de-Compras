@@ -4,7 +4,7 @@
 
 ## Ordem para publicar (regra 46 do Livro)
 1. No console do Firebase > Firestore > Regras, **copie as regras atuais para um arquivo de backup**.
-2. Cole o conteúdo de `firestore-bloco-ambientes-compartilhados.rules` **dentro** de `match /databases/{database}/documents { ... }`, junto das regras que já estão lá. Não apague nada.
+2. Use o arquivo **`firestore.rules`** (completo): são as suas regras atuais (v4.8) com o bloco de ambientes compartilhados já encaixado antes de `dados_pessoais`. Nada do que existia foi alterado. (O arquivo `firestore-bloco-ambientes-compartilhados.rules` é só o bloco isolado, para conferência.)
 3. Rode o roteiro abaixo no **Playground de regras**.
 4. Publique as regras.
 5. Só então publique o app v4.0 (pasta `publicar/`).

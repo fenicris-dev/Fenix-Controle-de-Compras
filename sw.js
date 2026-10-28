@@ -1,7 +1,7 @@
 /* Fênix | Controle de Compras — service worker (v3.2)
    Rede primeiro, com cache de reserva para abrir sem internet.
    Só guarda o próprio app, o fenix-core e o SDK do Firebase (gstatic). */
-const CACHE = 'fenix-controle-de-compras-v4.0';
+const CACHE = 'fenix-controle-de-compras-v4.2';
 const HOSTS = [self.location.host, 'www.gstatic.com', 'fenicris-dev.github.io'];
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => {

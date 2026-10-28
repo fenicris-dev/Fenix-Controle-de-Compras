@@ -1,12 +1,10 @@
-Fênix | Controle de Compras — v3.3 (Livro das Regras Fênix v4.4) — novidades: tema escuro opcional e produtos comprados para kit entram no Estoque
+Termos de Uso e Política de Privacidade — proposta de atualização (versão 4.9, 27/10/2026)
 
-publicar/  -> vai para a raiz do repositório do app (GitHub Pages):
-   index.html e fenix-controle-de-compras.html (cópias idênticas do app), sw.js, manifest.json,
-   icon-192.png, icon-512.png e icon-512-maskable.png (ícone oficial)
-manual/    -> Manual do usuário em MD e em PDF (também dentro do app, em Ajustes)
-versoes/   -> cópias com a versão no nome, SÓ controle interno. NUNCA suba esta pasta para o repositório.
+O que mudou, em relação à versão 4.4 publicada:
+- Política: catálogo Fênix de produtos (o que é e o que nunca é compartilhado); ambientes compartilhados (inclusive medicamentos de outra pessoa, que podem revelar dado de saúde); Open Food Facts (recebe só o código de barras); bases legais, direitos e segurança ajustados.
+- Termos: uso permitido (catálogo e convites), autorização para o catálogo, regras dos ambientes compartilhados.
 
-Publicar: 1) backup no app atual (Ajustes > Dados > Exportar backup); 2) substitua os arquivos de publicar/;
-3) abra o app, entre e confira os dados; 4) Painel da biblioteca > "Testar tudo".
-Tema: Ajustes > Sobre e Changelog > Tema (Automático, Claro ou Escuro).
-Selo: fenix-livro 4.4 · Ficha: A, B, C, E, G, I, J.
+Importante:
+1) O número "4.9" é uma suposição (a biblioteca está na 4.8 nas regras do Firestore). Ajuste a versão e a data se publicar com outro número.
+2) São textos de apoio, redigidos por mim a partir dos documentos atuais. Vale uma revisão jurídica antes de publicar, principalmente a parte de dados de saúde (medicamentos) e a base legal do catálogo.
+3) Publicar em: Fenix-Core/Termos/ (substitui os dois arquivos) e guardar cópia em versoes/ com a versão no nome.

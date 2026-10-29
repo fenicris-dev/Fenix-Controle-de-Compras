@@ -1,10 +1,10 @@
-Termos de Uso e Política de Privacidade — proposta de atualização (versão 4.9, 27/10/2026)
+FÊNIX | Gestor de Tempo v4.5 (core c 4.8, Livro das Regras v4.8)
 
-O que mudou, em relação à versão 4.4 publicada:
-- Política: catálogo Fênix de produtos (o que é e o que nunca é compartilhado); ambientes compartilhados (inclusive medicamentos de outra pessoa, que podem revelar dado de saúde); Open Food Facts (recebe só o código de barras); bases legais, direitos e segurança ajustados.
-- Termos: uso permitido (catálogo e convites), autorização para o catálogo, regras dos ambientes compartilhados.
-
-Importante:
-1) O número "4.9" é uma suposição (a biblioteca está na 4.8 nas regras do Firestore). Ajuste a versão e a data se publicar com outro número.
-2) São textos de apoio, redigidos por mim a partir dos documentos atuais. Vale uma revisão jurídica antes de publicar, principalmente a parte de dados de saúde (medicamentos) e a base legal do catálogo.
-3) Publicar em: Fenix-Core/Termos/ (substitui os dois arquivos) e guardar cópia em versoes/ com a versão no nome.
+Publicar no repositório Fenix-Gestor-do-Tempo (raiz): index.html, sw.js, manifest.json e os ícones (icon-*.png, apple-touch-icon.png).
+  index.html .......................... app publicado (cópia neutra)
+  fenix-gestor-de-tempo-v4.5.html ..... cópia idêntica com a versão no nome (só controle interno; não publicar)
+  sw.js ............................... service worker (cache fenix-tempo-v4.5)
+  manifest.json, icon-*.png ........... PWA (sem mudança)
+  firestore.rules ..................... sem mudança nesta versão (nenhuma coleção nova)
+  fenix-gestor-de-tempo-manual-v4.5.md/.pdf ... manual do usuário (o MD também está dentro do app)
+Remover do repositório, se existirem: termos.html e privacidade.html (o app agora aponta para os documentos oficiais do Fenix-Core).
